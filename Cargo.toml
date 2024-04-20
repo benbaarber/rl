@@ -7,3 +7,4 @@ description = "Rusty reinforcement learning"
 keywords = ["rl", "reinforcement learning", "ml", "machine learning", "ai"]
 
 [dependencies]
+rand = "0.8.5"
