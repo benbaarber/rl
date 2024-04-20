@@ -1,0 +1,9 @@
+[package]
+name = "rl"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Rusty reinforcement learning"
+keywords = ["rl", "reinforcement learning", "ml", "machine learning", "ai"]
+
+[dependencies]
