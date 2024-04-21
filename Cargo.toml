@@ -1,10 +1,11 @@
 [package]
 name = "rl"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 description = "Rusty reinforcement learning"
-keywords = ["rl", "reinforcement learning", "ml", "machine learning", "ai"]
+keywords = ["rl", "reinforcement-learning", "ml", "machine-learning", "ai"]
+repository = "https://github.com/benbaarber/rl"
 
 [dependencies]
 rand = "0.8.5"

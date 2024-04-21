@@ -20,7 +20,8 @@
  - Random Network Distillation (RND)
 
 ### other
- - Replay Buffer
+ - Simple Replay Buffer ✅
+ - Advanced Replay Buffers?
  - Environments
  - Logging
  - Data preprocessing
