@@ -19,7 +19,7 @@ pub struct EpsilonGreedy {
 impl Exploration for EpsilonGreedy {}
 
 impl EpsilonGreedy {
-    /// Initialize epsilon greedy policy from probability threshold epsilon.
+    /// Initialize epsilon greedy policy from probability threshold epsilon
     ///
     /// **Panics** if `epsilon` is not in the interval `[0,1]`
     pub fn new(epsilon: f64) -> Self {
@@ -47,9 +47,9 @@ pub struct DecayingEpsilonGreedy {
 impl Exploration for DecayingEpsilonGreedy {}
 
 impl DecayingEpsilonGreedy {
-    /// Initialize decaying epsilon greedy policy from start, end, and decay rate.
+    /// Initialize decaying epsilon greedy policy from start, end, and decay rate
     ///
-    /// **Panics** if `start`, `end`, or `decay` is not in the interval `[0,1]`, or if `start` is less than `end`.
+    /// **Panics** if `start`, `end`, or `decay` is not in the interval `[0,1]`, or if `start` is less than `end`
     pub fn new(start: f64, end: f64, decay: f64) -> Self {
         assert_probability!(start);
         assert_probability!(end);
