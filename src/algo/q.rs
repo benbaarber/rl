@@ -1,7 +1,21 @@
-use crate::{env::Environment, memory::Memory};
+use std::collections::HashMap;
 
-pub struct QAgent<E: Environment, M: Memory> {
+use crate::env::Environment;
+
+pub struct QAgent<E: Environment> {
     environment: E,
-    state: E::State,
-    memory: M,
+    q_table: HashMap<(E::State, E::Action), f64>,
+    alpha: f64, // learning rate
+    gamma: f64, // discount factor
+}
+
+impl<E: Environment> QAgent<E> {
+    pub fn new(env: E, alpha: f64, gamma: f64) -> Self {
+        Self {
+            environment: env,
+            q_table: HashMap::new(),
+            alpha,
+            gamma,
+        }
+    }
 }
