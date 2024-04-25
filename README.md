@@ -3,7 +3,8 @@
 ## TODO
 
 ### algo
- - Q 
+ - Q ✅
+ - Deep Q
  - Proximal Policy Optimization (PPO)
  - Soft Actor-Critic (SAC)
  - Trust Region Policy Optimization (TRPO)
@@ -13,7 +14,6 @@
  - Rainbow
 
 ### exploration
- - Epsilon-Greedy ✅
  - Decaying Epsilon-Greedy ✅
  - Softmax Exploration (Boltzmann Exploration)
  - Upper Confidence Bound (UCB)
@@ -25,6 +25,7 @@
  - Simple Replay Buffer ✅
  - Advanced Replay Buffers?
  - Environments
+   - Frozen Lake ✅
  - Logging
  - Data preprocessing
  - Burn integration for neural networks?
