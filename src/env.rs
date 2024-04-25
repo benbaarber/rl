@@ -53,7 +53,7 @@ pub trait TableEnvironment {
     /// Get the available actions for the current state
     ///
     /// The returned slice should never be empty, instead specify an action that represents doing nothing if necessary.
-    fn actions(&self) -> &[Self::Action];
+    fn actions(&self) -> Vec<Self::Action>;
 
     /// Determine if the state is active or terminal
     fn is_active(&self) -> bool;

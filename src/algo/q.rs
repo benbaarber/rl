@@ -59,7 +59,7 @@ impl<E: TableEnvironment> QAgent<E> {
         let mut actions = self.env.actions();
         let mut t = 0.0;
         while self.env.is_active() {
-            let action = self.act(state, actions, t);
+            let action = self.act(state, &actions, t);
             let (next_state, reward) = self.env.step(action);
             actions = self.env.actions();
 
@@ -76,5 +76,9 @@ impl<E: TableEnvironment> QAgent<E> {
             state = next_state;
             t += 1.0;
         }
+    }
+
+    pub fn get_q_table(&self) -> &HashMap<(E::State, E::Action), f64> {
+        &self.q_table
     }
 }

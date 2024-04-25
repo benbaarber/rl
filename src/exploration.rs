@@ -23,11 +23,10 @@ impl Exploration for EpsilonGreedy {}
 impl EpsilonGreedy {
     /// Initialize epsilon greedy policy from start, end, and decay rate
     ///
-    /// **Panics** if `start`, `end`, or `decay` is not in the interval `[0,1]`, or if `start` is less than `end`
+    /// **Panics** if `start` or `end` is not in the interval `[0,1]`, or if `start` is less than `end`
     pub fn new(start: f64, end: f64, decay: f64) -> Self {
         assert_interval!(start, 0.0, 1.0);
         assert_interval!(end, 0.0, 1.0);
-        assert_interval!(decay, 0.0, 1.0);
         assert!(
             start > end,
             "Epsilon start value must be greater than end value."

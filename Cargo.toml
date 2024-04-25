@@ -7,5 +7,9 @@ description = "Rusty reinforcement learning"
 keywords = ["rl", "ml", "machine-learning", "ai"]
 repository = "https://github.com/benbaarber/rl"
 
+[features]
+# Enable rust implementations of Farama's python gymnasium library
+gym = []
+
 [dependencies]
 rand = "0.8.5"
