@@ -34,12 +34,9 @@ impl EpsilonGreedy {
         Self { start, end, decay }
     }
 
-    /// Invoke epsilon greedy policy at time `t` where `t >= 0`
-    ///
-    /// **Panics** if `t < 0`
-    pub fn choose(&self, t: f64) -> Choice {
-        assert!(t >= 0.0, "t must be a positive number.");
-        let epsilon = self.end + (self.start - self.end) / f64::exp(t / self.decay);
+    /// Invoke epsilon greedy policy for current episode
+    pub fn choose(&self, episode: u32) -> Choice {
+        let epsilon = self.end + (self.start - self.end) * f64::exp(-(episode as f64) * self.decay);
         if thread_rng().gen::<f64>() > epsilon {
             Choice::Exploit
         } else {

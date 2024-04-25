@@ -14,6 +14,7 @@ pub struct QAgent<E: TableEnvironment> {
     alpha: f64, // learning rate
     gamma: f64, // discount factor
     exploration: EpsilonGreedy,
+    episode: u32, // current episode
 }
 
 impl<E: TableEnvironment> QAgent<E> {
@@ -35,13 +36,14 @@ impl<E: TableEnvironment> QAgent<E> {
             alpha,
             gamma,
             exploration,
+            episode: 0,
         }
     }
 
     // TODO: Handle empty case more gracefully
-    fn act(&self, state: E::State, actions: &[E::Action], time: f64) -> E::Action {
+    fn act(&self, state: E::State, actions: &[E::Action]) -> E::Action {
         let random = || actions.choose(&mut thread_rng()).unwrap();
-        *match self.exploration.choose(time) {
+        *match self.exploration.choose(self.episode) {
             Choice::Explore => random(),
             Choice::Exploit => actions
                 .iter()
@@ -57,9 +59,8 @@ impl<E: TableEnvironment> QAgent<E> {
     pub fn go(&mut self) {
         let mut state = self.env.reset();
         let mut actions = self.env.actions();
-        let mut t = 0.0;
         while self.env.is_active() {
-            let action = self.act(state, &actions, t);
+            let action = self.act(state, &actions);
             let (next_state, reward) = self.env.step(action);
             actions = self.env.actions();
 
@@ -74,8 +75,9 @@ impl<E: TableEnvironment> QAgent<E> {
 
             self.q_table.insert((state, action), weighted_q_value);
             state = next_state;
-            t += 1.0;
         }
+
+        self.episode += 1;
     }
 
     pub fn get_q_table(&self) -> &HashMap<(E::State, E::Action), f64> {
