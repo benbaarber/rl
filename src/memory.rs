@@ -11,12 +11,6 @@ use crate::{ds::RingBuffer, env::Environment};
 /// - `.3` (reward): The reward received after taking the action
 pub struct Experience<E: Environment>(pub E::State, pub E::Action, pub E::State, pub f64);
 
-impl<E: Environment> Clone for Experience<E> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.clone(), self.2.clone(), self.3)
-    }
-}
-
 /// Experience replay structs
 pub trait Memory {
     type Env: Environment;
@@ -26,7 +20,7 @@ pub trait Memory {
     /// Sample a random batch of experiences from the memory
     ///
     /// **Panics** if `batch_size` is greater than the memory capacity.
-    fn sample(&self, batch_size: usize) -> Vec<Experience<Self::Env>>;
+    fn sample(&self, batch_size: usize) -> Vec<&Experience<Self::Env>>;
 }
 
 /// A fixed-size memory storage for reinforcement learning experiences
@@ -35,9 +29,7 @@ pub trait Memory {
 /// It automatically overwrites the oldest experiences once it reaches its capacity.
 ///
 /// **Type Parameters:**
-/// - `S`: Represents the type of the states in the environment
-/// - `A`: Represents the type of the actions
-/// - `CAP`: The maximum number of experiences the memory can hold, specified at compile time
+/// - `E`: Environment
 ///
 /// **Fields:**
 /// - `memory`: A `RingBuffer` that stores the experiences
@@ -52,7 +44,7 @@ impl<E: Environment> Memory for ReplayMemory<E> {
         self.memory.push(exp);
     }
 
-    fn sample(&self, batch_size: usize) -> Vec<Experience<Self::Env>> {
+    fn sample(&self, batch_size: usize) -> Vec<&Experience<Self::Env>> {
         assert!(
             batch_size <= self.memory.len(),
             "`batch_size` must be less than buffer capacity"
@@ -61,7 +53,6 @@ impl<E: Environment> Memory for ReplayMemory<E> {
         self.memory
             .view()
             .choose_multiple(&mut rng, batch_size)
-            .cloned()
             .collect()
     }
 }

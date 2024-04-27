@@ -1,4 +1,4 @@
-use crate::env::TableEnvironment;
+use crate::env::Environment;
 
 pub enum Square {
     Frozen = 0,
@@ -23,6 +23,7 @@ pub struct FrozenLake {
 
 impl FrozenLake {
     pub fn new() -> Self {
+        // TODO: Support custom maps
         let map = [
             Square::Start,
             Square::Frozen,
@@ -49,7 +50,7 @@ impl FrozenLake {
     }
 }
 
-impl TableEnvironment for FrozenLake {
+impl Environment for FrozenLake {
     type State = usize;
     type Action = Move;
 
