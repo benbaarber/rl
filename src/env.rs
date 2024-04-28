@@ -18,9 +18,6 @@ pub trait Environment {
     /// Determine if the state is active or terminal
     fn is_active(&self) -> bool;
 
-    /// Compute the reward associated with transitioning from one state to another due to an action
-    fn reward(&self, state: Self::State, action: Self::Action, next_state: Self::State) -> f64;
-
     /// Update the environment in response to a an action taken by an agent, producing a new state and associated reward
     ///
     /// **Returns** `(next_state, reward)`

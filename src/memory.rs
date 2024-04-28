@@ -4,7 +4,7 @@ use crate::{ds::RingBuffer, env::Environment};
 
 /// Represents a single experience or transition in the environment
 ///
-/// **Fields:**
+/// ### Fields:
 /// - `.0` (state): The state of the environment before taking the action
 /// - `.1` (action): The action taken in the given state
 /// - `.2` (next state): The state of the environment after the action is taken
@@ -28,10 +28,10 @@ pub trait Memory {
 /// This structure uses a ring buffer to store experiences, which are tuples of (state, action, next state, reward).
 /// It automatically overwrites the oldest experiences once it reaches its capacity.
 ///
-/// **Type Parameters:**
+/// ### Type Parameters:
 /// - `E`: Environment
 ///
-/// **Fields:**
+/// ### Fields:
 /// - `memory`: A `RingBuffer` that stores the experiences
 pub struct ReplayMemory<E: Environment> {
     memory: RingBuffer<Experience<E>>,

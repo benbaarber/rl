@@ -15,6 +15,9 @@ pub enum Move {
     Up = 3,
 }
 
+/// A very simple RL environment taken from Python [gymnasium](https://gymnasium.farama.org/)
+///
+/// Intended for use with a [QTableAgent](crate::algo::QTableAgent)
 pub struct FrozenLake {
     map: [Square; 16],
     pos: usize,
@@ -87,18 +90,9 @@ impl Environment for FrozenLake {
         }
     }
 
-    fn reward(&self, _state: Self::State, _action: Self::Action, next_state: Self::State) -> f64 {
-        match self.map[next_state] {
-            Square::Hole => -1.0,
-            Square::Goal => 1.0,
-            _ => -0.1,
-        }
-    }
-
     fn step(&mut self, action: Self::Action) -> (Self::State, f64) {
         self.steps += 1;
 
-        let last_pos = self.pos;
         match action {
             Move::Left => self.pos -= 1,
             Move::Down => self.pos += 4,
@@ -106,7 +100,12 @@ impl Environment for FrozenLake {
             Move::Up => self.pos -= 4,
         };
 
-        let reward = self.reward(last_pos, action, self.pos);
+        let reward = match self.map[self.pos] {
+            Square::Hole => -1.0,
+            Square::Goal => 1.0,
+            _ => -0.1,
+        };
+
         (self.pos, reward)
     }
 

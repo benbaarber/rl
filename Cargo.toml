@@ -8,8 +8,11 @@ keywords = ["rl", "ml", "machine-learning", "ai"]
 repository = "https://github.com/benbaarber/rl"
 
 [features]
-# Enable rust implementations of Farama's python gymnasium library
-gym = []
+gym = ["dep:strum"]
 
 [dependencies]
 rand = "0.8.5"
+strum = { version = "0.26.2", features = ["derive"], optional = true }
+
+[dev-dependencies]
+burn = { version = "0.13.1", features = ["wgpu"] }
