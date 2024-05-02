@@ -4,12 +4,26 @@ use std::ops::Index;
 pub struct RingBuffer<T> {
     buffer: Vec<T>,
     i: usize,
+    capacity: usize,
 }
 
 impl<T> RingBuffer<T> {
+    pub fn new(capacity: usize) -> Self {
+        Self {
+            buffer: Vec::<T>::with_capacity(capacity),
+            i: 0,
+            capacity,
+        }
+    }
+
     /// Constructs a new `RingBuffer` from a provided `Vec`
     pub fn from(data: Vec<T>) -> Self {
-        Self { buffer: data, i: 0 }
+        let capacity = data.len();
+        Self {
+            buffer: data,
+            i: 0,
+            capacity,
+        }
     }
 
     /// Returns the buffer length
@@ -17,9 +31,17 @@ impl<T> RingBuffer<T> {
         self.buffer.len()
     }
 
+    pub fn capacity(&self) -> usize {
+        self.capacity
+    }
+
     /// Insert an element into the buffer, overwriting the oldest element
     pub fn push(&mut self, item: T) {
-        self.buffer[self.i] = item;
+        if self.i >= self.len() {
+            self.buffer.push(item);
+        } else {
+            self.buffer[self.i] = item;
+        }
         self.i = (self.i + 1) % self.len();
     }
 

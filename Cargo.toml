@@ -15,4 +15,4 @@ rand = "0.8.5"
 strum = { version = "0.26.2", features = ["derive"], optional = true }
 
 [dev-dependencies]
-burn = { version = "0.13.1", features = ["wgpu"] }
+burn = { version = "0.13.1", features = ["wgpu", "autodiff"] }

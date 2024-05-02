@@ -1,14 +1,14 @@
 use std::collections::{HashSet, VecDeque};
 
 use rand::{seq::IteratorRandom, thread_rng, Rng};
-use strum::{EnumIter, IntoEnumIterator, VariantArray};
+use strum::{EnumIter, FromRepr, IntoEnumIterator, VariantArray};
 
 use crate::env::Environment;
 
 /// Position coordinates in the field with 1 unit of padding as a death zone
 type Pos = (usize, usize);
 
-#[derive(EnumIter, VariantArray, Clone, Copy)]
+#[derive(EnumIter, VariantArray, FromRepr, Clone, Copy)]
 pub enum Dir {
     Up = 0,
     Right = 1,
@@ -67,6 +67,10 @@ impl GrassyField {
         self.snake.len()
     }
 
+    pub fn field_size(&self) -> usize {
+        self.size
+    }
+
     fn spawn_food(&mut self) {
         let occupied = HashSet::<&Pos>::from_iter(&self.snake.body);
         let mut vacant = Vec::with_capacity(self.size.pow(2) - self.snake.body.len());
@@ -120,7 +124,7 @@ impl Environment for GrassyField {
         self.get_state()
     }
 
-    fn step(&mut self, action: Self::Action) -> (Self::State, f64) {
+    fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f64) {
         let mut reward = -0.05;
         let head = self.snake.head();
 
@@ -138,9 +142,9 @@ impl Environment for GrassyField {
         }
 
         if !self.is_active() {
-            reward = -1.0;
+            (None, -1.0)
+        } else {
+            (Some(self.get_state()), reward)
         }
-
-        (self.get_state(), reward)
     }
 }

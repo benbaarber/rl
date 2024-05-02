@@ -5,7 +5,7 @@ use crate::{
     assert_interval,
     env::Environment,
     exploration::{Choice, EpsilonGreedy},
-    memory::Experience,
+    memory::Exp,
 };
 
 pub trait QAgent {
@@ -21,7 +21,7 @@ pub trait QAgent {
     /// Update the agent's policy after an [Experience]
     fn learn(
         &mut self,
-        experience: Experience<Self::Env>,
+        experience: Exp<Self::Env>,
         next_actions: &[<Self::Env as Environment>::Action],
     );
 
@@ -97,13 +97,22 @@ where
         }
     }
 
-    fn learn(&mut self, experience: Experience<E>, next_actions: &[E::Action]) {
-        let Experience(state, action, next_state, reward) = experience;
+    fn learn(&mut self, experience: Exp<E>, next_actions: &[E::Action]) {
+        let Exp {
+            state,
+            action,
+            next_state,
+            reward,
+        } = experience;
 
         let q_value = *self.q_table.get(&(state, action)).unwrap_or(&0.0);
         let max_next_q = next_actions
             .iter()
-            .map(|&a| *self.q_table.get(&(next_state, a)).unwrap_or(&0.0))
+            .map(|&a| {
+                *next_state
+                    .and_then(|s| self.q_table.get(&(s, a)))
+                    .unwrap_or(&0.0)
+            })
             .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap_or(0.0);
         let new_q_value = reward + self.gamma * max_next_q;
@@ -113,16 +122,23 @@ where
     }
 
     fn go(&mut self) {
-        let mut state = self.env.reset();
+        let mut next_state = Some(self.env.reset());
         let mut actions = self.env.actions();
-        while self.env.is_active() {
+        while let Some(state) = next_state {
             let action = self.act(state, &actions);
-            let (next_state, reward) = self.env.step(action);
+            let (next, reward) = self.env.step(action);
+            next_state = next;
             actions = self.env.actions();
 
-            self.learn(Experience(state, action, next_state, reward), &actions);
-
-            state = next_state;
+            self.learn(
+                Exp {
+                    state,
+                    action,
+                    next_state,
+                    reward,
+                },
+                &actions,
+            );
         }
 
         self.episode += 1;

@@ -1,7 +1,11 @@
-use burn::backend::{wgpu, Wgpu};
+use burn::backend::{wgpu, Autodiff, Wgpu};
 
+mod agent;
 mod model;
 
-fn main() {
-    let device = wgpu::WgpuDevice::default();
-}
+type DQNBackend = Wgpu<wgpu::AutoGraphicsApi, f32, i32>;
+type DQNAutodiffBackend = Autodiff<DQNBackend>;
+
+static DEVICE: wgpu::WgpuDevice = wgpu::WgpuDevice::default();
+
+fn main() {}

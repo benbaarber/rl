@@ -90,7 +90,7 @@ impl Environment for FrozenLake {
         }
     }
 
-    fn step(&mut self, action: Self::Action) -> (Self::State, f64) {
+    fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f64) {
         self.steps += 1;
 
         match action {
@@ -100,13 +100,13 @@ impl Environment for FrozenLake {
             Move::Up => self.pos -= 4,
         };
 
-        let reward = match self.map[self.pos] {
-            Square::Hole => -1.0,
-            Square::Goal => 1.0,
-            _ => -0.1,
+        let (next_state, reward) = match self.map[self.pos] {
+            Square::Hole => (None, -1.0),
+            Square::Goal => (None, 1.0),
+            _ => (Some(self.pos), -0.1),
         };
 
-        (self.pos, reward)
+        (next_state, reward)
     }
 
     fn reset(&mut self) -> Self::State {

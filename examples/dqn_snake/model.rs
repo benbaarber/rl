@@ -28,7 +28,7 @@ pub struct ModelConfig {
 impl ModelConfig {
     pub fn init<B: Backend>(&self, device: &B::Device) -> Model<B> {
         let k_size: usize = 3;
-        let conv_output_size = self.conv2_out * (self.field_size - 2 * (k_size - 1)).pow(exp);
+        let conv_output_size = self.conv2_out * (self.field_size - 2 * (k_size - 1)).pow(2);
 
         Model {
             conv1: Conv2dConfig::new([1, self.conv1_out], [k_size, k_size]).init(device),
@@ -43,16 +43,18 @@ impl ModelConfig {
 }
 
 impl<B: Backend> Model<B> {
-    pub fn forward(&self, field: Tensor<B, 2>) -> Tensor<B, 1> {
-        let [h, w] = field.dims();
-        let x = field.reshape([1, 1, h, w]);
+    /// In shape: `[num_batches, size, size]`
+    ///
+    /// Out shape: `[num_batches, 4]`
+    pub fn forward(&self, input: Tensor<B, 3>) -> Tensor<B, 2> {
+        let x = input.unsqueeze_dim(1);
 
         let x = self.conv1.forward(x);
         let x = self.conv2.forward(x);
         let x = self.activation.forward(x);
 
-        let [_, c, h, w] = x.dims();
-        let x = x.reshape([1, c * h * w]);
+        let [n, c, h, w] = x.dims();
+        let x = x.reshape([n, c * h * w]);
         let x = self.fc1.forward(x);
         let x = self.activation.forward(x);
         let x = self.fc2.forward(x);

@@ -1,4 +1,4 @@
-# rl - A rust reinforcement learning crate
+# rl - A rust reinforcement learning library
 
 ## TODO
 
@@ -26,6 +26,7 @@
  - Advanced Replay Buffers?
  - Environments
    - Frozen Lake ✅
+   - Grassy Field ✅
  - Logging
  - Data preprocessing
  - Burn integration for neural networks?

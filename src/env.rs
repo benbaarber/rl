@@ -21,7 +21,7 @@ pub trait Environment {
     /// Update the environment in response to a an action taken by an agent, producing a new state and associated reward
     ///
     /// **Returns** `(next_state, reward)`
-    fn step(&mut self, action: Self::Action) -> (Self::State, f64);
+    fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f64);
 
     /// Reset the environment to an initial state
     ///
