@@ -36,9 +36,9 @@ where
     E::Action: Copy + Eq + Hash,
 {
     env: &'a mut E,
-    q_table: HashMap<(E::State, E::Action), f64>,
-    alpha: f64, // learning rate
-    gamma: f64, // discount factor
+    q_table: HashMap<(E::State, E::Action), f32>,
+    alpha: f32, // learning rate
+    gamma: f32, // discount factor
     exploration: EpsilonGreedy,
     episode: u32, // current episode
 }
@@ -57,7 +57,7 @@ where
     /// - `exploration`: A customized [EpsilonGreedy] policy
     ///
     /// **Panics** if `alpha` or `gamma` is not in the interval `[0,1]`
-    pub fn new(env: &'a mut E, alpha: f64, gamma: f64, exploration: EpsilonGreedy) -> Self {
+    pub fn new(env: &'a mut E, alpha: f32, gamma: f32, exploration: EpsilonGreedy) -> Self {
         assert_interval!(alpha, 0.0, 1.0);
         assert_interval!(gamma, 0.0, 1.0);
         Self {
@@ -70,7 +70,7 @@ where
         }
     }
 
-    pub fn get_q_table(&self) -> &HashMap<(E::State, E::Action), f64> {
+    pub fn get_q_table(&self) -> &HashMap<(E::State, E::Action), f32> {
         &self.q_table
     }
 }

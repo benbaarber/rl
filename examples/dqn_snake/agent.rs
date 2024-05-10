@@ -1,7 +1,7 @@
 use burn::{
     nn::loss::{HuberLoss, HuberLossConfig, Reduction},
     optim::GradientsParams,
-    tensor::{Bool, Int, Tensor},
+    prelude::*,
 };
 use rand::{seq::IteratorRandom, thread_rng};
 use rl::{
@@ -9,31 +9,31 @@ use rl::{
     env::Environment,
     exploration::{Choice, EpsilonGreedy},
     gym::{grassy_field::Dir, GrassyField},
-    memory::{Exp, Memory, ReplayMemory},
+    memory::{Exp, ReplayMemory},
 };
 use strum::IntoEnumIterator;
 
 use crate::{
     model::{Model, ModelConfig},
-    DQNAutodiffBackend as B, DEVICE,
+    DQNAutodiffBackend as B, DEVICE, FIELD_SIZE,
 };
 
 pub struct SnakeDQN<'a> {
-    env: &'a mut GrassyField,
+    env: &'a mut GrassyField<FIELD_SIZE>,
     policy_net: Model<B>,
     target_net: Model<B>,
-    memory: ReplayMemory<GrassyField>,
+    memory: ReplayMemory<GrassyField<FIELD_SIZE>>,
     loss: HuberLoss<B>,
     exploration: EpsilonGreedy,
-    gamma: f64,
-    tau: f64,
-    lr: f64,
+    gamma: f32,
+    tau: f32,
+    lr: f32,
     episode: u32,
 }
 
 impl<'a> SnakeDQN<'a> {
     pub fn new(
-        env: &'a mut GrassyField,
+        env: &'a mut GrassyField<FIELD_SIZE>,
         model_config: ModelConfig,
         loss_config: HuberLossConfig,
         exploration: EpsilonGreedy,
@@ -54,7 +54,7 @@ impl<'a> SnakeDQN<'a> {
 }
 
 impl QAgent for SnakeDQN<'_> {
-    type Env = GrassyField;
+    type Env = GrassyField<FIELD_SIZE>;
 
     fn act(
         &self,
@@ -66,7 +66,7 @@ impl QAgent for SnakeDQN<'_> {
             Choice::Exploit => {
                 let size = self.env.field_size();
                 let field_tensor =
-                    Tensor::<B, 1>::from_floats(state, &DEVICE).reshape([1, size, size]);
+                    Tensor::<B, 2>::from_floats(state, &DEVICE).reshape([1, size, size]);
                 let choice = self
                     .policy_net
                     .forward(field_tensor)
@@ -82,38 +82,51 @@ impl QAgent for SnakeDQN<'_> {
         experience: Exp<Self::Env>,
         next_actions: &[<Self::Env as Environment>::Action],
     ) {
-        let batch_size = 128;
-        let Some(batch) = self.memory.sample_zipped(batch_size) else {
+        const BATCH_SIZE: usize = 128;
+        let Some(batch) = self.memory.sample_zipped::<BATCH_SIZE>() else {
             return;
         };
 
-        let non_terminal_mask = Tensor::<B, 1, Bool>::from_bool(
-            batch.next_states.iter().map(|s| s.is_some()).collect(),
-            &DEVICE,
-        );
+        let mut non_terminal_mask = [false; BATCH_SIZE];
+        for (i, s) in batch.next_states.iter().enumerate() {
+            if s.is_some() {
+                non_terminal_mask[i] = true;
+            }
+        }
+        let non_terminal_mask = Tensor::<B, 1, Bool>::from_bool(non_terminal_mask.into(), &DEVICE);
 
         let field_size = self.env.field_size();
-        let next_states =
-            Tensor::<B, 2>::from_floats(batch.next_states.into_iter().flatten().collect(), &DEVICE)
-                .reshape([0, field_size, field_size]);
+        let next_states = Tensor::<B, 3>::cat(
+            batch
+                .next_states
+                .into_iter()
+                .flatten()
+                .map(|ns| Tensor::<B, 3>::from_floats([ns], &DEVICE))
+                .collect::<Vec<_>>(),
+            0,
+        );
 
         let states =
-            Tensor::<B, 2>::from_floats(batch.states, &DEVICE).reshape([0, field_size, field_size]);
+            Tensor::<B, 3>::from_floats(batch.states, &DEVICE).reshape([0, field_size, field_size]);
         let actions = Tensor::<B, 1, Int>::from_ints(
-            batch.actions.into_iter().map(|&a| a as i32).collect(),
+            Data::new(
+                batch
+                    .actions
+                    .into_iter()
+                    .map(|a| a as i32)
+                    .collect::<Vec<_>>(),
+                [BATCH_SIZE].into(),
+            ),
             &DEVICE,
         );
-        let rewards = Tensor::<B, 1>::from_floats(
-            batch.rewards.into_iter().map(|r| r as f32).collect(),
-            &DEVICE,
-        );
+        let rewards = Tensor::<B, 1>::from_floats(batch.rewards, &DEVICE);
 
         let q_values = self
             .policy_net
             .forward(states)
             .gather(1, actions.unsqueeze_dim(1))
             .squeeze(1);
-        let max_next_q_values = Tensor::<B, 1>::zeros([batch_size], &DEVICE).mask_where(
+        let max_next_q_values = Tensor::<B, 1>::zeros([BATCH_SIZE], &DEVICE).mask_where(
             non_terminal_mask,
             self.target_net.forward(next_states).max_dim(1).squeeze(1),
         );

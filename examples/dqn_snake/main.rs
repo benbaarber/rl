@@ -8,4 +8,6 @@ type DQNAutodiffBackend = Autodiff<DQNBackend>;
 
 static DEVICE: wgpu::WgpuDevice = wgpu::WgpuDevice::default();
 
+const FIELD_SIZE: usize = 8;
+
 fn main() {}

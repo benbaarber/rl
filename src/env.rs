@@ -5,10 +5,20 @@
 /// and a finite state space and action space.
 pub trait Environment {
     /// A representation of the state of the environment to be passed to an agent
-    type State;
+    ///
+    /// This should be a relatively simple data type
+    ///
+    /// ### Trait bounds
+    /// - `Clone`: When sampling batches of experiences, cloning is necessary
+    type State: Clone;
 
     /// A representation of an action that an agent can take to affect the environment
-    type Action;
+    ///
+    /// This should be a relatively simple data type
+    ///
+    /// ### Trait bounds
+    /// - `Clone`: When sampling batches of experiences, cloning is necessary
+    type Action: Clone;
 
     /// Get the available actions for the current state
     ///
@@ -21,7 +31,7 @@ pub trait Environment {
     /// Update the environment in response to a an action taken by an agent, producing a new state and associated reward
     ///
     /// **Returns** `(next_state, reward)`
-    fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f64);
+    fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32);
 
     /// Reset the environment to an initial state
     ///

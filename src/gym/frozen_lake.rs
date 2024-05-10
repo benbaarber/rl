@@ -90,7 +90,7 @@ impl Environment for FrozenLake {
         }
     }
 
-    fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f64) {
+    fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32) {
         self.steps += 1;
 
         match action {
