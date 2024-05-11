@@ -2242,6 +2242,7 @@ name = "rl"
 version = "0.2.0"
 dependencies = [
  "burn",
+ "once_cell",
  "rand",
  "strum 0.26.2",
 ]

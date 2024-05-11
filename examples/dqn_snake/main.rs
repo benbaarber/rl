@@ -1,4 +1,8 @@
-use burn::backend::{wgpu, Autodiff, Wgpu};
+use burn::backend::{
+    wgpu::{self, WgpuDevice},
+    Autodiff, Wgpu,
+};
+use once_cell::sync::Lazy;
 
 mod agent;
 mod model;
@@ -6,7 +10,7 @@ mod model;
 type DQNBackend = Wgpu<wgpu::AutoGraphicsApi, f32, i32>;
 type DQNAutodiffBackend = Autodiff<DQNBackend>;
 
-static DEVICE: wgpu::WgpuDevice = wgpu::WgpuDevice::default();
+static DEVICE: Lazy<WgpuDevice> = Lazy::new(WgpuDevice::default);
 
 const FIELD_SIZE: usize = 8;
 
