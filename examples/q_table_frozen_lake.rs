@@ -11,7 +11,7 @@ fn main() {
         &mut env,
         0.7,
         0.95,
-        EpsilonGreedy::new(decay::Exponential::new(1.0, 0.01, 1e-3)),
+        EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.01).unwrap()),
     );
 
     for _ in 0..10000 {
