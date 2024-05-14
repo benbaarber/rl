@@ -2,7 +2,7 @@ use rand::{seq::SliceRandom, thread_rng};
 use std::{collections::HashMap, hash::Hash};
 
 use crate::{
-    assert_interval,
+    assert_interval, decay,
     env::Environment,
     exploration::{Choice, EpsilonGreedy},
     memory::Exp,
@@ -39,7 +39,7 @@ where
     q_table: HashMap<(E::State, E::Action), f32>,
     alpha: f32, // learning rate
     gamma: f32, // discount factor
-    exploration: EpsilonGreedy,
+    exploration: EpsilonGreedy<decay::Exponential>,
     episode: u32, // current episode
 }
 
@@ -57,7 +57,12 @@ where
     /// - `exploration`: A customized [EpsilonGreedy] policy
     ///
     /// **Panics** if `alpha` or `gamma` is not in the interval `[0,1]`
-    pub fn new(env: &'a mut E, alpha: f32, gamma: f32, exploration: EpsilonGreedy) -> Self {
+    pub fn new(
+        env: &'a mut E,
+        alpha: f32,
+        gamma: f32,
+        exploration: EpsilonGreedy<decay::Exponential>,
+    ) -> Self {
         assert_interval!(alpha, 0.0, 1.0);
         assert_interval!(gamma, 0.0, 1.0);
         Self {

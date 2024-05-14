@@ -1,16 +1,20 @@
 use std::borrow::Borrow;
 
 use burn::{
-    nn::loss::{HuberLoss, HuberLossConfig, Reduction},
-    optim::GradientsParams,
+    nn::loss::{HuberLoss, HuberLossConfig, HuberLossRecord, Reduction},
+    optim::{AdamW, AdamWConfig, GradientsParams, Optimizer},
     prelude::*,
 };
 use rand::{seq::IteratorRandom, thread_rng};
 use rl::{
     algo::QAgent,
+    decay,
     env::Environment,
     exploration::{Choice, EpsilonGreedy},
-    gym::{grassy_field::Dir, GrassyField},
+    gym::{
+        grassy_field::{Dir, Grid},
+        GrassyField,
+    },
     memory::{Exp, ReplayMemory},
 };
 use strum::IntoEnumIterator;
@@ -26,7 +30,7 @@ pub struct SnakeDQN<'a> {
     target_net: Model<B>,
     memory: ReplayMemory<GrassyField<FIELD_SIZE>>,
     loss: HuberLoss<B>,
-    exploration: EpsilonGreedy,
+    exploration: EpsilonGreedy<decay::Exponential>,
     gamma: f32,
     tau: f32,
     lr: f32,
@@ -38,7 +42,7 @@ impl<'a> SnakeDQN<'a> {
         env: &'a mut GrassyField<FIELD_SIZE>,
         model_config: ModelConfig,
         loss_config: HuberLossConfig,
-        exploration: EpsilonGreedy,
+        exploration: EpsilonGreedy<decay::Exponential>,
     ) -> Self {
         Self {
             env,
@@ -55,14 +59,11 @@ impl<'a> SnakeDQN<'a> {
     }
 }
 
-impl QAgent for SnakeDQN<'_> {
-    type Env = GrassyField<FIELD_SIZE>;
+type State = Grid<FIELD_SIZE>;
+type Action = Dir;
 
-    fn act(
-        &self,
-        state: <Self::Env as Environment>::State,
-        actions: &[<Self::Env as Environment>::Action],
-    ) -> <Self::Env as Environment>::Action {
+impl SnakeDQN<'_> {
+    fn act(&self, state: State, actions: &[Action]) -> Action {
         match self.exploration.choose(self.episode) {
             Choice::Explore => Dir::iter().choose(&mut thread_rng()).unwrap(),
             Choice::Exploit => {
@@ -79,11 +80,7 @@ impl QAgent for SnakeDQN<'_> {
         }
     }
 
-    fn learn(
-        &mut self,
-        experience: Exp<Self::Env>,
-        next_actions: &[<Self::Env as Environment>::Action],
-    ) {
+    fn learn(&mut self, mut optimizer: impl Optimizer<Model<B>, B>) {
         const BATCH_SIZE: usize = 128;
         let Some(batch) = self.memory.sample_zipped::<BATCH_SIZE>() else {
             return;
@@ -140,8 +137,10 @@ impl QAgent for SnakeDQN<'_> {
             .forward(q_values, discounted_expected_return, Reduction::Auto);
         let grads = GradientsParams::from_grads(loss.backward(), &self.policy_net);
 
-        todo!()
-        // self.optimizer.step(self.lr, self.policy_net, grads, None);
+        let model = unsafe { std::ptr::read(&self.policy_net) };
+        self.policy_net = optimizer.step(self.lr.into(), model, grads);
+
+        todo!() // final step, target net adjustment
     }
 
     fn go(&mut self) {

@@ -11,9 +11,9 @@ repository = "https://github.com/benbaarber/rl"
 gym = ["dep:strum"]
 
 [dependencies]
+burn = { version = "0.13.2", features = ["wgpu", "autodiff"] }
 rand = "0.8.5"
 strum = { version = "0.26.2", features = ["derive"], optional = true }
 
 [dev-dependencies]
-burn = { version = "0.13.1", features = ["wgpu", "autodiff"] }
 once_cell = "1.19.0"

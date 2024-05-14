@@ -1,6 +1,9 @@
 /// Implemented RL algorithms
 pub mod algo;
 
+/// Implementations of strategies for time-decaying hyperparameters
+pub mod decay;
+
 /// Data structures
 pub mod ds;
 
