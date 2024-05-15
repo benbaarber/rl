@@ -11,6 +11,23 @@ fn validate(rate: f32, vi: f32, vf: f32) -> Result<(), String> {
         .ok_or_else(|| String::from("`vi - vf` must have same sign as `rate`"))
 }
 
+/// A constant value
+pub struct Constant {
+    value: f32,
+}
+
+impl Constant {
+    pub fn new(value: f32) -> Self {
+        Self { value }
+    }
+}
+
+impl Decay for Constant {
+    fn evaluate(&self, _t: f32) -> f32 {
+        self.value
+    }
+}
+
 /// v(t) = v<sub>f</sub> + (v<sub>i</sub> - v<sub>f</sub>) * e<sup>-rt</sup>
 pub struct Exponential {
     rate: f32,

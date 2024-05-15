@@ -12,7 +12,7 @@ gym = ["dep:strum"]
 
 [dependencies]
 burn = { version = "0.13.2", features = ["wgpu", "autodiff"] }
-rand = "0.8.5"
+rand = { version = "0.8.5", features = ["alloc"] }
 strum = { version = "0.26.2", features = ["derive"], optional = true }
 
 [dev-dependencies]

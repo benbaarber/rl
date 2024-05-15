@@ -125,14 +125,7 @@ impl<E: Environment> ReplayMemory<E> {
     /// ### Returns
     /// - `Some(experiences)` if `S` is less than or equal to the buffer length
     /// - `None` otherwise
-    ///
-    /// **Panics** if `S` is greater than the memory capacity.
     pub fn sample<const S: usize>(&self) -> Option<[Exp<E>; S]> {
-        assert!(
-            S <= self.memory.capacity(),
-            "`batch_size` must be less than buffer capacity"
-        );
-
         if S <= self.memory.len() {
             Some(
                 self.memory
@@ -154,14 +147,7 @@ impl<E: Environment> ReplayMemory<E> {
     /// ### Returns
     /// - `Some(experiences)` if `batch_size` is less than or equal to the buffer length
     /// - `None` otherwise
-    ///
-    /// **Panics** if `batch_size` is greater than the memory capacity.
     pub fn sample_dyn(&self, batch_size: usize) -> Option<Vec<&Exp<E>>> {
-        assert!(
-            batch_size <= self.memory.capacity(),
-            "`batch_size` must be less than buffer capacity"
-        );
-
         if batch_size <= self.memory.len() {
             Some(
                 self.memory
@@ -179,14 +165,7 @@ impl<E: Environment> ReplayMemory<E> {
     /// ### Returns
     /// - `Some(batch)` if `S` is less than or equal to the buffer length
     /// - `None` otherwise
-    ///
-    /// **Panics** if `S` is greater than the memory capacity.
     pub fn sample_zipped<const S: usize>(&self) -> Option<ExpBatch<E, S>> {
-        assert!(
-            S <= self.memory.capacity(),
-            "`batch_size` must be less than buffer capacity"
-        );
-
         if S <= self.memory.len() {
             let experiences = self
                 .memory
@@ -205,14 +184,7 @@ impl<E: Environment> ReplayMemory<E> {
     /// ### Returns
     /// - `Some(batch)` if `batch_size` is less than or equal to the buffer length
     /// - `None` otherwise
-    ///
-    /// **Panics** if `batch_size` is greater than the memory capacity.
     pub fn sample_zipped_dyn(&self, batch_size: usize) -> Option<DynamicExpBatch<E>> {
-        assert!(
-            batch_size <= self.memory.capacity(),
-            "`batch_size` must be less than buffer capacity"
-        );
-
         if batch_size <= self.memory.len() {
             let experiences = self
                 .memory
