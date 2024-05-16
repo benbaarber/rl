@@ -15,10 +15,12 @@ pub struct Softmax<D: Decay> {
 }
 
 impl<D: Decay> Softmax<D> {
+    /// Initialize softmax exploration policy with a decay strategy
     pub fn new(decay: D) -> Self {
         Self { temperature: decay }
     }
 
+    /// Invoke softmax exploration policy at time `t` with provided Q values
     pub fn choose(&self, t: f32, q_values: &[f32]) -> usize {
         let tau = self.temperature.evaluate(t);
         let exponentials = q_values.into_iter().map(|x| (x / tau).exp());
@@ -28,6 +30,7 @@ impl<D: Decay> Softmax<D> {
         dist.sample(&mut thread_rng())
     }
 
+    /// Invoke softmax exploration policy at time `t` with provided 1D [Tensor] of Q values
     pub fn choose_from_tensor<B>(&self, t: f32, tensor: Tensor<B, 1>) -> usize
     where
         B: Backend,
