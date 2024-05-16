@@ -18,15 +18,18 @@ impl<const A: usize> UCB<A> {
     }
 
     /// Invoke UCB policy at time `t` with provided Q values
-    pub fn choose(&self, t: f32, q_values: &[f32; A]) -> usize {
+    pub fn choose(&mut self, t: f32, q_values: &[f32; A]) -> usize {
         let k = self.c * t.log10().sqrt();
-        q_values
+        let choice = q_values
             .into_iter()
             .enumerate()
             .map(|(i, x)| (i, x + k * self.counter[i].powf(-0.5)))
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .map(|(i, _)| i)
-            .expect("`q_values` is not empty")
+            .expect("`q_values` is not empty");
+
+        self.counter[choice] += 1.0;
+        choice
     }
 
     /// (not yet implemented) Invoke UCB policy at time `t` with provided 1D [Tensor] of Q values
