@@ -16,6 +16,9 @@ pub mod exploration;
 /// Experience replay
 pub mod memory;
 
+/// Probabilistic models
+pub mod prob;
+
 /// Testing environments
 #[cfg(feature = "gym")]
 pub mod gym;

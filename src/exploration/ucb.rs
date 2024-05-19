@@ -7,6 +7,7 @@ pub struct UCB<const A: usize> {
 }
 
 impl<const A: usize> UCB<A> {
+    // TODO?: add decay
     /// Initialize UCB policy with exploration parameter `c`
     ///
     /// A higher `c` value equates to more exploration. If unsure where to start, 1 is a good default value.

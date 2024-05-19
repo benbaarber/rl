@@ -6,8 +6,10 @@ pub enum Choice {
 
 mod epsilon_greedy;
 mod softmax;
+mod thompson;
 mod ucb;
 
 pub use epsilon_greedy::EpsilonGreedy;
 pub use softmax::Softmax;
+// pub use thompson::Thompson;
 pub use ucb::UCB;
