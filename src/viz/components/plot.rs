@@ -43,26 +43,24 @@ impl Plot {
         self
     }
 
-    pub fn update(&mut self, data: Vec<(f64, f64)>) {
+    pub fn update(&mut self, point: (f64, f64)) {
         let mut x_bounds_changed = false;
         let mut y_bounds_changed = false;
-        for point in &data {
-            if point.0 > self.x_bounds[1] {
-                self.x_bounds[1] = point.0;
-                x_bounds_changed = true;
-            }
-            if point.0 < self.x_bounds[0] {
-                self.x_bounds[0] = point.0;
-                x_bounds_changed = true;
-            }
-            if point.1 < self.y_bounds[0] {
-                self.y_bounds[0] = point.1;
-                y_bounds_changed = true;
-            }
-            if point.1 > self.y_bounds[1] {
-                self.y_bounds[1] = point.1;
-                y_bounds_changed = true;
-            }
+        if point.0 > self.x_bounds[1] {
+            self.x_bounds[1] = point.0;
+            x_bounds_changed = true;
+        }
+        if point.0 < self.x_bounds[0] {
+            self.x_bounds[0] = point.0;
+            x_bounds_changed = true;
+        }
+        if point.1 < self.y_bounds[0] {
+            self.y_bounds[0] = point.1;
+            y_bounds_changed = true;
+        }
+        if point.1 > self.y_bounds[1] {
+            self.y_bounds[1] = point.1;
+            y_bounds_changed = true;
         }
 
         if x_bounds_changed {
@@ -72,7 +70,7 @@ impl Plot {
             self.y_labels = self.y_bounds.iter().map(|x| format_float(*x, 2)).collect();
         }
 
-        self.data.extend(data);
+        self.data.push(point);
     }
 }
 

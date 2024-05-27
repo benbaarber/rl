@@ -20,22 +20,6 @@ macro_rules! assert_interval {
     };
 }
 
-pub fn transpose_iter<T>(v: Vec<Vec<T>>) -> impl Iterator<Item = Vec<T>> {
-    assert!(!v.is_empty());
-    let len = v[0].len();
-    let mut iters = v.into_iter().map(|n| n.into_iter()).collect::<Vec<_>>();
-    (0..len).map(move |_| {
-        iters
-            .iter_mut()
-            .map(|n| n.next().unwrap())
-            .collect::<Vec<T>>()
-    })
-}
-
-pub fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
-    transpose_iter(v).collect()
-}
-
 /// Format a float with the given precision. Will use scientific notation if necessary.
 pub fn format_float(float: f64, precision: usize) -> String {
     let scientific_notation_threshold = 0.1_f64.powf(precision as f64 - 1.0);

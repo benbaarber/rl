@@ -6,7 +6,7 @@ use std::{
 use rand::{seq::IteratorRandom, thread_rng, Rng};
 use strum::{EnumIter, FromRepr, IntoEnumIterator, VariantArray};
 
-use crate::env::Environment;
+use crate::env::{EnvState, Environment};
 
 /// Position coordinates in the field with 1 unit of padding as a death zone
 type Pos = (usize, usize);
@@ -82,10 +82,16 @@ impl Snake {
     }
 }
 
+pub struct Summary {
+    score: usize,
+    steps: u32,
+}
+
 /// A field for the game of snake
 pub struct GrassyField<const S: usize> {
     snake: Snake,
     food: Pos,
+    steps: u32,
 }
 
 impl<const S: usize> GrassyField<S> {
@@ -93,6 +99,7 @@ impl<const S: usize> GrassyField<S> {
         Self {
             snake: Snake::new(S),
             food: (1, 1),
+            steps: 0,
         }
     }
 
@@ -133,21 +140,34 @@ impl<const S: usize> GrassyField<S> {
 
         state.take()
     }
+
+    fn is_alive(&self) -> bool {
+        self.is_in_bounds(self.snake.head()) && !self.snake.is_intersecting()
+    }
 }
 
 impl<const S: usize> Environment for GrassyField<S> {
     type State = Grid<S>;
     type Action = Dir;
+    type Summary = Summary;
 
     fn actions(&self) -> Vec<Self::Action> {
         Dir::VARIANTS.to_vec()
     }
 
-    fn is_active(&self) -> bool {
-        self.is_in_bounds(self.snake.head()) && !self.snake.is_intersecting()
+    fn get_activity_state(&self) -> EnvState<Self> {
+        if self.is_alive() {
+            EnvState::Active
+        } else {
+            EnvState::Terminal(Summary {
+                score: self.snake.len() - 1,
+                steps: self.steps,
+            })
+        }
     }
 
     fn reset(&mut self) -> Self::State {
+        self.steps = 0;
         self.snake = Snake::new(S);
         self.spawn_food();
         self.get_state()
@@ -170,7 +190,7 @@ impl<const S: usize> Environment for GrassyField<S> {
             self.snake.body.pop_back();
         }
 
-        if !self.is_active() {
+        if !self.is_alive() {
             (None, -1.0)
         } else {
             (Some(self.get_state()), reward)

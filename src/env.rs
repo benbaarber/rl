@@ -20,13 +20,18 @@ pub trait Environment {
     /// - `Clone`: When sampling batches of experiences, cloning is necessary
     type Action: Clone;
 
+    /// Relevant data to be returned after an episode summarizing the agent's performance
+    type Summary;
+
     /// Get the available actions for the current state
     ///
     /// The returned slice should never be empty, instead specify an action that represents doing nothing if necessary.
     fn actions(&self) -> Vec<Self::Action>;
 
     /// Determine if the state is active or terminal
-    fn is_active(&self) -> bool;
+    fn get_activity_state(&self) -> EnvState<Self>
+    where
+        Self: Sized;
 
     /// Update the environment in response to a an action taken by an agent, producing a new state and associated reward
     ///
@@ -37,4 +42,9 @@ pub trait Environment {
     ///
     /// **Returns** the state
     fn reset(&mut self) -> Self::State;
+}
+
+pub enum EnvState<E: Environment> {
+    Active,
+    Terminal(E::Summary),
 }

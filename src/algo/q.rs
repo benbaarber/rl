@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash};
 
 use crate::{
     assert_interval, decay,
-    env::Environment,
+    env::{EnvState, Environment},
     exploration::{Choice, EpsilonGreedy},
     memory::Exp,
 };
@@ -80,13 +80,11 @@ where
     }
 }
 
-impl<E: Environment> QAgent for QTableAgent<'_, E>
+impl<E: Environment> QTableAgent<'_, E>
 where
     E::State: Copy + Eq + Hash,
     E::Action: Copy + Eq + Hash,
 {
-    type Env = E;
-
     fn act(&self, state: E::State, actions: &[E::Action]) -> E::Action {
         let random = || actions.choose(&mut thread_rng()).unwrap();
         *match self.exploration.choose(self.episode) {
@@ -126,7 +124,7 @@ where
         self.q_table.insert((state, action), weighted_q_value);
     }
 
-    fn go(&mut self) {
+    pub fn go(&mut self) -> E::Summary {
         let mut next_state = Some(self.env.reset());
         let mut actions = self.env.actions();
         while let Some(state) = next_state {
@@ -147,5 +145,9 @@ where
         }
 
         self.episode += 1;
+        let EnvState::Terminal(summary) = self.env.get_activity_state() else {
+            panic!()
+        };
+        return summary;
     }
 }

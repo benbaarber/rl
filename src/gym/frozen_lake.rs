@@ -1,4 +1,4 @@
-use crate::env::Environment;
+use crate::env::{EnvState, Environment};
 
 pub enum Square {
     Frozen = 0,
@@ -13,6 +13,11 @@ pub enum Move {
     Down = 1,
     Right = 2,
     Up = 3,
+}
+
+pub struct Summary {
+    pub won: bool,
+    pub steps: u32,
 }
 
 /// A very simple RL environment taken from Python [gymnasium](https://gymnasium.farama.org/)
@@ -56,6 +61,7 @@ impl FrozenLake {
 impl Environment for FrozenLake {
     type State = usize;
     type Action = Move;
+    type Summary = Summary;
 
     fn actions(&self) -> Vec<Self::Action> {
         let mut actions = Vec::with_capacity(4);
@@ -76,17 +82,17 @@ impl Environment for FrozenLake {
         actions
     }
 
-    fn is_active(&self) -> bool {
+    fn get_activity_state(&self) -> EnvState<Self> {
         match self.map[self.pos] {
-            Square::Frozen | Square::Start => true,
-            Square::Hole => {
-                println!("Agent fell into a hole after {} steps.", self.steps);
-                false
-            }
-            Square::Goal => {
-                println!("Agent reached the goal after {} steps!", self.steps);
-                false
-            }
+            Square::Frozen | Square::Start => EnvState::Active,
+            Square::Hole => EnvState::Terminal(Summary {
+                won: false,
+                steps: self.steps,
+            }),
+            Square::Goal => EnvState::Terminal(Summary {
+                won: true,
+                steps: self.steps,
+            }),
         }
     }
 

@@ -7,8 +7,6 @@ use std::{
 use crossterm::event::{self, Event::Key, KeyCode, KeyEventKind};
 use ratatui::{prelude::*, widgets::*};
 
-use crate::util::transpose_iter;
-
 use self::components::Plot;
 
 mod components;
@@ -24,7 +22,7 @@ pub enum State {
 
 pub struct Update {
     pub episode: u16,
-    pub data: Vec<Vec<(f64, f64)>>,
+    pub data: Vec<(f64, f64)>,
 }
 
 pub struct App {
@@ -57,18 +55,21 @@ impl App {
         loop {
             match self.state {
                 State::Train => {
-                    match rx.try_recv() {
-                        Ok(Update { episode, data }) => {
-                            self.episode = episode;
-                            for (i, metric) in transpose_iter(data).enumerate() {
-                                self.plots[i].update(metric);
+                    loop {
+                        match rx.try_recv() {
+                            Ok(Update { episode, data }) => {
+                                self.episode = episode;
+                                for (i, metric) in data.iter().enumerate() {
+                                    self.plots[i].update(*metric);
+                                }
                             }
-                        }
-                        Err(TryRecvError::Empty) => {}
-                        Err(TryRecvError::Disconnected) => {
-                            self.state = State::Error("Channel disconnected.");
-                        }
-                    };
+                            Err(TryRecvError::Empty) => break,
+                            Err(TryRecvError::Disconnected) => {
+                                self.state = State::Error("Channel disconnected.");
+                                break;
+                            }
+                        };
+                    }
 
                     terminal.draw(|frame| frame.render_widget(&*self, frame.size()))?;
 
@@ -126,6 +127,7 @@ impl Widget for &App {
                     .border_type(BorderType::Rounded)
                     .title("Progress"),
             )
+            .gauge_style(Color::Cyan)
             .ratio(self.episode as f64 / self.total_episodes as f64)
             .render(vert[1], buf);
 
