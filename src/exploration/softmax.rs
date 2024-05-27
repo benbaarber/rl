@@ -3,7 +3,6 @@ use std::ops::AddAssign;
 use burn::tensor::{self, backend::Backend, Tensor};
 use rand::{
     distributions::{uniform::SampleUniform, Distribution, WeightedIndex},
-    seq::SliceRandom,
     thread_rng,
 };
 

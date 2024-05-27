@@ -1,6 +1,6 @@
 use rand::{thread_rng, Rng};
 
-use crate::{assert_interval, decay::Decay};
+use crate::decay::Decay;
 
 use super::Choice;
 

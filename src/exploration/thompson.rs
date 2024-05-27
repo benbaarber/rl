@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use rand::distributions::Distribution;
-
 use crate::{env::Environment, memory::Exp, prob::ProbModel};
 
 /// Thompson sampling exploration policy (also known as probability matching)

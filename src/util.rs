@@ -35,3 +35,13 @@ pub fn transpose_iter<T>(v: Vec<Vec<T>>) -> impl Iterator<Item = Vec<T>> {
 pub fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
     transpose_iter(v).collect()
 }
+
+/// Format a float with the given precision. Will use scientific notation if necessary.
+pub fn format_float(float: f64, precision: usize) -> String {
+    let scientific_notation_threshold = 0.1_f64.powf(precision as f64 - 1.0);
+
+    match scientific_notation_threshold >= float {
+        true => format!("{float:.precision$e}"),
+        false => format!("{float:.precision$}"),
+    }
+}
