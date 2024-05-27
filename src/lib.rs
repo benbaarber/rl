@@ -19,6 +19,9 @@ pub mod memory;
 /// Probabilistic models
 pub mod prob;
 
+/// Training visualization TUI
+pub mod viz;
+
 /// Testing environments
 #[cfg(feature = "gym")]
 pub mod gym;
