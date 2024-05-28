@@ -4,7 +4,6 @@ use ratatui::{
     widgets::{block::Title, *},
 };
 
-use crate::util::format_float;
 
 pub struct Plot {
     pub x_title: String,
@@ -32,14 +31,14 @@ impl Plot {
     /// Provide initial x bounds
     pub fn with_x_bounds(mut self, x_bounds: [f64; 2]) -> Self {
         self.x_bounds = x_bounds;
-        self.x_labels = self.x_bounds.iter().map(|x| format_float(*x, 2)).collect();
+        self.x_labels = self.x_bounds.iter().map(|x| format!("{x:.2}")).collect();
         self
     }
 
     /// Provide initial y bounds
     pub fn with_y_bounds(mut self, y_bounds: [f64; 2]) -> Self {
         self.y_bounds = y_bounds;
-        self.y_labels = self.y_bounds.iter().map(|x| format_float(*x, 2)).collect();
+        self.y_labels = self.y_bounds.iter().map(|x| format!("{x:.2}")).collect();
         self
     }
 
@@ -64,10 +63,10 @@ impl Plot {
         }
 
         if x_bounds_changed {
-            self.x_labels = self.x_bounds.iter().map(|x| format_float(*x, 2)).collect();
+            self.x_labels = self.x_bounds.iter().map(|x| format!("{x:.2}")).collect();
         }
         if y_bounds_changed {
-            self.y_labels = self.y_bounds.iter().map(|x| format_float(*x, 2)).collect();
+            self.y_labels = self.y_bounds.iter().map(|x| format!("{x:.2}")).collect();
         }
 
         self.data.push(point);

@@ -18,7 +18,7 @@ fn main() {
         EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.01).unwrap()),
     );
 
-    let mut app = App::new(&["Steps"], NUM_EPISODES);
+    let mut app = App::new(&["Steps", "Reward"], NUM_EPISODES);
     let (tx, rx) = mpsc::channel();
 
     let app_handle = thread::spawn(move || app.run(rx));
@@ -27,7 +27,7 @@ fn main() {
         let summary = agent.go();
         tx.send(viz::Update {
             episode: e,
-            data: vec![(e as f64, summary.steps as f64)],
+            data: vec![(e as f64, summary.steps as f64), (e as f64, summary.reward)],
         })
         .unwrap();
     }

@@ -18,6 +18,7 @@ pub enum Move {
 pub struct Summary {
     pub won: bool,
     pub steps: u32,
+    pub reward: f64,
 }
 
 /// A very simple RL environment taken from Python [gymnasium](https://gymnasium.farama.org/)
@@ -27,6 +28,7 @@ pub struct FrozenLake {
     map: [Square; 16],
     pos: usize,
     steps: u32,
+    reward: f64,
 }
 
 impl FrozenLake {
@@ -54,6 +56,7 @@ impl FrozenLake {
             map,
             pos: 0,
             steps: 0,
+            reward: 0.0,
         }
     }
 }
@@ -88,10 +91,12 @@ impl Environment for FrozenLake {
             Square::Hole => EnvState::Terminal(Summary {
                 won: false,
                 steps: self.steps,
+                reward: self.reward,
             }),
             Square::Goal => EnvState::Terminal(Summary {
                 won: true,
                 steps: self.steps,
+                reward: self.reward,
             }),
         }
     }
@@ -112,11 +117,14 @@ impl Environment for FrozenLake {
             _ => (Some(self.pos), -0.1),
         };
 
+        self.reward += reward as f64;
+
         (next_state, reward)
     }
 
     fn reset(&mut self) -> Self::State {
         self.steps = 0;
+        self.reward = 0.0;
         self.pos = 0;
         self.pos
     }
