@@ -1,13 +1,12 @@
-use std::borrow::Borrow;
-
 use burn::{
-    nn::loss::{HuberLoss, HuberLossConfig, HuberLossRecord, Reduction},
-    optim::{AdamW, AdamWConfig, GradientsParams, Optimizer},
+    module::{ModuleMapper, ModuleVisitor, ParamId},
+    nn::loss::{HuberLoss, HuberLossConfig, Reduction},
+    optim::{GradientsParams, Optimizer},
     prelude::*,
+    tensor::container::TensorContainer,
 };
 use rand::{seq::IteratorRandom, thread_rng};
 use rl::{
-    algo::QAgent,
     decay,
     env::Environment,
     exploration::{Choice, EpsilonGreedy},
@@ -15,7 +14,7 @@ use rl::{
         grassy_field::{Dir, Grid},
         GrassyField,
     },
-    memory::{Exp, ReplayMemory},
+    memory::ReplayMemory,
 };
 use strum::IntoEnumIterator;
 
@@ -35,6 +34,56 @@ pub struct SnakeDQN<'a> {
     tau: f32,
     lr: f32,
     episode: u32,
+}
+
+#[derive(Default)]
+struct ParamCollector {
+    i: usize,
+    pub container: TensorContainer<usize>,
+}
+
+impl ParamCollector {
+    fn extract(self) -> TensorContainer<usize> {
+        return self.container;
+    }
+}
+
+impl ModuleVisitor<B> for ParamCollector {
+    fn visit_float<const D: usize>(&mut self, id: &ParamId, tensor: &Tensor<B, D>) {
+        self.container.register(self.i, tensor.clone());
+        self.i += 1;
+    }
+}
+
+struct TargetNetMapper<'a> {
+    i: usize,
+    policy_net_params: &'a TensorContainer<usize>,
+    tau: f32,
+}
+
+impl<'a> TargetNetMapper<'a> {
+    fn new(policy_net_params: &'a TensorContainer<usize>, tau: f32) -> Self {
+        Self {
+            i: 0,
+            policy_net_params,
+            tau,
+        }
+    }
+}
+
+impl ModuleMapper<B> for TargetNetMapper<'_> {
+    fn map_float<const D: usize>(&mut self, _id: &ParamId, tensor: Tensor<B, D>) -> Tensor<B, D> {
+        let pn_tensor: Tensor<B, D> = self
+            .policy_net_params
+            .get(&self.i)
+            .expect("`policy_net_params` is same length as target net params.");
+
+        let t = tensor.clone();
+        tensor.slice_assign(
+            t.dims().map(|d| 0..d),
+            pn_tensor * self.tau + t * (1.0 - self.tau),
+        )
+    }
 }
 
 impl<'a> SnakeDQN<'a> {
@@ -140,7 +189,13 @@ impl SnakeDQN<'_> {
         let model = unsafe { std::ptr::read(&self.policy_net) };
         self.policy_net = optimizer.step(self.lr.into(), model, grads);
 
-        todo!() // final step, target net adjustment
+        let mut collector = ParamCollector::default();
+        self.policy_net.visit(&mut collector);
+        let policy_net_params = collector.extract();
+
+        let mut target_net_mapper = TargetNetMapper::new(&policy_net_params, self.tau);
+        let model = unsafe { std::ptr::read(&self.target_net) };
+        self.target_net = model.map(&mut target_net_mapper);
     }
 
     fn go(&mut self) {
