@@ -1,7 +1,7 @@
 use burn::{
     module::{ModuleMapper, ModuleVisitor, ParamId},
     nn::loss::{HuberLoss, HuberLossConfig, Reduction},
-    optim::{GradientsParams, Optimizer},
+    optim::{AdamWConfig, GradientsParams, Optimizer},
     prelude::*,
     tensor::container::TensorContainer,
 };
@@ -11,10 +11,10 @@ use rl::{
     env::Environment,
     exploration::{Choice, EpsilonGreedy},
     gym::{
-        grassy_field::{Dir, Grid},
+        grassy_field::{self, Dir, Grid},
         GrassyField,
     },
-    memory::ReplayMemory,
+    memory::{Exp, ReplayMemory},
 };
 use strum::IntoEnumIterator;
 
@@ -78,6 +78,8 @@ impl ModuleMapper<B> for TargetNetMapper<'_> {
             .get(&self.i)
             .expect("`policy_net_params` is same length as target net params.");
 
+        self.i += 1;
+
         let t = tensor.clone();
         tensor.slice_assign(
             t.dims().map(|d| 0..d),
@@ -122,6 +124,7 @@ impl SnakeDQN<'_> {
                 let choice = self
                     .policy_net
                     .forward(field_tensor)
+                    .squeeze::<1>(0)
                     .argmax(0)
                     .into_scalar();
                 Dir::from_repr(choice.try_into().unwrap()).unwrap()
@@ -129,7 +132,7 @@ impl SnakeDQN<'_> {
         }
     }
 
-    fn learn(&mut self, mut optimizer: impl Optimizer<Model<B>, B>) {
+    fn learn(&mut self, optimizer: &mut impl Optimizer<Model<B>, B>) {
         const BATCH_SIZE: usize = 128;
         let Some(batch) = self.memory.sample_zipped::<BATCH_SIZE>() else {
             return;
@@ -198,7 +201,27 @@ impl SnakeDQN<'_> {
         self.target_net = model.map(&mut target_net_mapper);
     }
 
-    fn go(&mut self) {
-        todo!()
+    pub fn go(&mut self) -> grassy_field::Summary {
+        let mut next_state = Some(self.env.reset());
+        let mut optimizer = AdamWConfig::new().init::<B, Model<B>>();
+
+        while let Some(state) = next_state {
+            let actions = self.env.actions();
+            let action = self.act(state, &actions);
+            let (next, reward) = self.env.step(action);
+            next_state = next;
+
+            self.memory.push(Exp {
+                state,
+                action,
+                next_state,
+                reward,
+            });
+
+            self.learn(&mut optimizer);
+        }
+
+        self.episode += 1;
+        self.env.summary()
     }
 }

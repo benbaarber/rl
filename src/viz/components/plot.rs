@@ -4,7 +4,6 @@ use ratatui::{
     widgets::{block::Title, *},
 };
 
-
 pub struct Plot {
     pub x_title: String,
     pub y_title: String,

@@ -1,5 +1,6 @@
-use crate::env::{EnvState, Environment};
+use crate::env::Environment;
 
+#[derive(PartialEq)]
 pub enum Square {
     Frozen = 0,
     Hole = 1,
@@ -85,19 +86,27 @@ impl Environment for FrozenLake {
         actions
     }
 
-    fn get_activity_state(&self) -> EnvState<Self> {
+    fn summary(&self) -> Self::Summary {
+        let won = self.map[self.pos] == Square::Goal;
+
+        Summary {
+            won,
+            steps: self.steps,
+            reward: self.reward,
+        }
+    }
+
+    fn is_active(&self) -> bool {
         match self.map[self.pos] {
-            Square::Frozen | Square::Start => EnvState::Active,
-            Square::Hole => EnvState::Terminal(Summary {
-                won: false,
-                steps: self.steps,
-                reward: self.reward,
-            }),
-            Square::Goal => EnvState::Terminal(Summary {
-                won: true,
-                steps: self.steps,
-                reward: self.reward,
-            }),
+            Square::Frozen | Square::Start => true,
+            Square::Hole => {
+                println!("Agent fell into a hole after {} steps.", self.steps);
+                false
+            }
+            Square::Goal => {
+                println!("Agent reached the goal after {} steps!", self.steps);
+                false
+            }
         }
     }
 

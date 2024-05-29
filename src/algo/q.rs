@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash};
 
 use crate::{
     assert_interval, decay,
-    env::{EnvState, Environment},
+    env::Environment,
     exploration::{Choice, EpsilonGreedy},
     memory::Exp,
 };
@@ -145,9 +145,6 @@ where
         }
 
         self.episode += 1;
-        let EnvState::Terminal(summary) = self.env.get_activity_state() else {
-            panic!()
-        };
-        return summary;
+        self.env.summary()
     }
 }

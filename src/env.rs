@@ -28,10 +28,8 @@ pub trait Environment {
     /// The returned slice should never be empty, instead specify an action that represents doing nothing if necessary.
     fn actions(&self) -> Vec<Self::Action>;
 
-    /// Determine if the state is active or terminal
-    fn get_activity_state(&self) -> EnvState<Self>
-    where
-        Self: Sized;
+    /// Summarize the current run of the environment for logging
+    fn summary(&self) -> Self::Summary;
 
     /// Update the environment in response to a an action taken by an agent, producing a new state and associated reward
     ///
@@ -42,9 +40,9 @@ pub trait Environment {
     ///
     /// **Returns** the state
     fn reset(&mut self) -> Self::State;
-}
 
-pub enum EnvState<E: Environment> {
-    Active,
-    Terminal(E::Summary),
+    /// Determine if the environment is in an active or terminal state
+    fn is_active(&self) -> bool {
+        true
+    }
 }

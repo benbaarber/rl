@@ -6,7 +6,7 @@ use std::{
 use rand::{seq::IteratorRandom, thread_rng, Rng};
 use strum::{EnumIter, FromRepr, IntoEnumIterator, VariantArray};
 
-use crate::env::{EnvState, Environment};
+use crate::env::Environment;
 
 /// Position coordinates in the field with 1 unit of padding as a death zone
 type Pos = (usize, usize);
@@ -83,8 +83,8 @@ impl Snake {
 }
 
 pub struct Summary {
-    score: usize,
-    steps: u32,
+    pub score: usize,
+    pub steps: u32,
 }
 
 /// A field for the game of snake
@@ -114,8 +114,8 @@ impl<const S: usize> GrassyField<S> {
     fn spawn_food(&mut self) {
         let occupied = HashSet::<&Pos>::from_iter(&self.snake.body);
         let mut vacant = Vec::with_capacity(S.pow(2) - self.snake.body.len());
-        for i in 1..=S {
-            for j in 1..=S {
+        for i in 1..S {
+            for j in 1..S {
                 let pos = (i, j);
                 if !occupied.contains(&pos) {
                     vacant.push(pos);
@@ -140,10 +140,6 @@ impl<const S: usize> GrassyField<S> {
 
         state.take()
     }
-
-    fn is_alive(&self) -> bool {
-        self.is_in_bounds(self.snake.head()) && !self.snake.is_intersecting()
-    }
 }
 
 impl<const S: usize> Environment for GrassyField<S> {
@@ -155,14 +151,14 @@ impl<const S: usize> Environment for GrassyField<S> {
         Dir::VARIANTS.to_vec()
     }
 
-    fn get_activity_state(&self) -> EnvState<Self> {
-        if self.is_alive() {
-            EnvState::Active
-        } else {
-            EnvState::Terminal(Summary {
-                score: self.snake.len() - 1,
-                steps: self.steps,
-            })
+    fn is_active(&self) -> bool {
+        self.is_in_bounds(self.snake.head()) && !self.snake.is_intersecting()
+    }
+
+    fn summary(&self) -> Self::Summary {
+        Summary {
+            score: self.snake.len() - 1,
+            steps: self.steps,
         }
     }
 
@@ -174,14 +170,16 @@ impl<const S: usize> Environment for GrassyField<S> {
     }
 
     fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32) {
+        self.steps += 1;
         let mut reward = -0.05;
         let head = self.snake.head();
 
         self.snake.dir = action;
-        let t = action as usize;
-        self.snake
-            .body
-            .push_front((head.0 + (t & 1) * (2 - t), head.1 + ((t + 1) & 1) * (t - 1)));
+        let t = action as isize;
+        self.snake.body.push_front((
+            (head.0 as isize + (t & 1) * (2 - t)) as usize,
+            (head.1 as isize + ((t + 1) & 1) * (t - 1)) as usize,
+        ));
 
         if self.snake.head() == self.food {
             self.spawn_food();
@@ -190,7 +188,7 @@ impl<const S: usize> Environment for GrassyField<S> {
             self.snake.body.pop_back();
         }
 
-        if !self.is_alive() {
+        if !self.is_active() {
             (None, -1.0)
         } else {
             (Some(self.get_state()), reward)

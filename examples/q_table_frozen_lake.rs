@@ -23,11 +23,11 @@ fn main() {
 
     let app_handle = thread::spawn(move || app.run(rx));
 
-    for e in 0..NUM_EPISODES {
+    for i in 0..NUM_EPISODES {
         let summary = agent.go();
         tx.send(viz::Update {
-            episode: e,
-            data: vec![(e as f64, summary.steps as f64), (e as f64, summary.reward)],
+            episode: i,
+            data: vec![(i as f64, summary.steps as f64), (i as f64, summary.reward)],
         })
         .unwrap();
     }
