@@ -117,5 +117,3 @@ impl Widget for &Plot {
         chart.render(area, buf);
     }
 }
-
-pub struct PlotSection;

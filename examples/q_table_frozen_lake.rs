@@ -1,7 +1,7 @@
 use std::{sync::mpsc, thread};
 
 use rl::{
-    algo::{QAgent, QTableAgent},
+    algo::QTableAgent,
     decay,
     exploration::EpsilonGreedy,
     gym::FrozenLake,
@@ -32,5 +32,5 @@ fn main() {
         .unwrap();
     }
 
-    app_handle.join();
+    let _ = app_handle.join();
 }

@@ -1,3 +1,4 @@
+#![allow(unused)]
 use std::marker::PhantomData;
 
 use crate::{env::Environment, memory::Exp, prob::ProbModel};

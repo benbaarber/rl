@@ -1,9 +1,7 @@
 use burn::{
-    module::{ModuleMapper, ModuleVisitor, ParamId},
     nn::loss::{HuberLoss, HuberLossConfig, Reduction},
     optim::{AdamWConfig, GradientsParams, Optimizer},
     prelude::*,
-    tensor::container::TensorContainer,
 };
 use rand::{seq::IteratorRandom, thread_rng};
 use rl::{
@@ -36,58 +34,6 @@ pub struct SnakeDQN<'a> {
     episode: u32,
 }
 
-#[derive(Default)]
-struct ParamCollector {
-    i: usize,
-    pub container: TensorContainer<usize>,
-}
-
-impl ParamCollector {
-    fn extract(self) -> TensorContainer<usize> {
-        return self.container;
-    }
-}
-
-impl ModuleVisitor<B> for ParamCollector {
-    fn visit_float<const D: usize>(&mut self, id: &ParamId, tensor: &Tensor<B, D>) {
-        self.container.register(self.i, tensor.clone());
-        self.i += 1;
-    }
-}
-
-struct TargetNetMapper<'a> {
-    i: usize,
-    policy_net_params: &'a TensorContainer<usize>,
-    tau: f32,
-}
-
-impl<'a> TargetNetMapper<'a> {
-    fn new(policy_net_params: &'a TensorContainer<usize>, tau: f32) -> Self {
-        Self {
-            i: 0,
-            policy_net_params,
-            tau,
-        }
-    }
-}
-
-impl ModuleMapper<B> for TargetNetMapper<'_> {
-    fn map_float<const D: usize>(&mut self, _id: &ParamId, tensor: Tensor<B, D>) -> Tensor<B, D> {
-        let pn_tensor: Tensor<B, D> = self
-            .policy_net_params
-            .get(&self.i)
-            .expect("`policy_net_params` is same length as target net params.");
-
-        self.i += 1;
-
-        let t = tensor.clone();
-        tensor.slice_assign(
-            t.dims().map(|d| 0..d),
-            pn_tensor * self.tau + t * (1.0 - self.tau),
-        )
-    }
-}
-
 impl<'a> SnakeDQN<'a> {
     pub fn new(
         env: &'a mut GrassyField<FIELD_SIZE>,
@@ -114,7 +60,7 @@ type State = Grid<FIELD_SIZE>;
 type Action = Dir;
 
 impl SnakeDQN<'_> {
-    fn act(&self, state: State, actions: &[Action]) -> Action {
+    fn act(&self, state: State, _actions: &[Action]) -> Action {
         match self.exploration.choose(self.episode) {
             Choice::Explore => Dir::iter().choose(&mut thread_rng()).unwrap(),
             Choice::Exploit => {
@@ -189,25 +135,23 @@ impl SnakeDQN<'_> {
             .forward(q_values, discounted_expected_return, Reduction::Auto);
         let grads = GradientsParams::from_grads(loss.backward(), &self.policy_net);
 
-        let model = unsafe { std::ptr::read(&self.policy_net) };
-        self.policy_net = optimizer.step(self.lr.into(), model, grads);
+        let policy_net = unsafe { std::ptr::read(&self.policy_net) };
+        self.policy_net = optimizer.step(self.lr.into(), policy_net, grads);
 
-        let mut collector = ParamCollector::default();
-        self.policy_net.visit(&mut collector);
-        let policy_net_params = collector.extract();
-
-        let mut target_net_mapper = TargetNetMapper::new(&policy_net_params, self.tau);
-        let model = unsafe { std::ptr::read(&self.target_net) };
-        self.target_net = model.map(&mut target_net_mapper);
+        let target_net = unsafe { std::ptr::read(&self.target_net) };
+        self.target_net = target_net.soft_update(&self.policy_net, self.tau);
     }
 
     pub fn go(&mut self) -> grassy_field::Summary {
         let mut next_state = Some(self.env.reset());
-        let mut optimizer = AdamWConfig::new().init::<B, Model<B>>();
+        let mut optimizer = AdamWConfig::new()
+            .with_epsilon(3.58e-3)
+            .init::<B, Model<B>>();
 
         while let Some(state) = next_state {
             let actions = self.env.actions();
             let action = self.act(state, &actions);
+            // println!("Action: {:?}", action);
             let (next, reward) = self.env.step(action);
             next_state = next;
 

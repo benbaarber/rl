@@ -34,7 +34,8 @@ impl<const A: usize> UCB<A> {
     }
 
     /// (not yet implemented) Invoke UCB policy at time `t` with provided 1D [Tensor] of Q values
-    pub fn _choose_from_tensor<B: Backend>(&self, t: f32, tensor: Tensor<B, 1>) -> usize {
+    #[allow(unused)]
+    pub fn choose_from_tensor<B: Backend>(&self, t: f32, tensor: Tensor<B, 1>) -> usize {
         todo!()
     }
 }

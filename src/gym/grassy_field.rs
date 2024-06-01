@@ -33,17 +33,17 @@ impl<const S: usize> Index<&Pos> for IGrid<S> {
     type Output = f32;
 
     fn index(&self, index: &Pos) -> &Self::Output {
-        &self.grid[index.0][index.1]
+        &self.grid[index.0 - 1][index.1 - 1]
     }
 }
 
 impl<const S: usize> IndexMut<&Pos> for IGrid<S> {
     fn index_mut(&mut self, index: &Pos) -> &mut Self::Output {
-        &mut self.grid[index.0][index.1]
+        &mut self.grid[index.0 - 1][index.1 - 1]
     }
 }
 
-#[derive(EnumIter, VariantArray, FromRepr, Clone, Copy)]
+#[derive(EnumIter, VariantArray, FromRepr, Clone, Copy, Debug)]
 pub enum Dir {
     Up = 0,
     Right = 1,
@@ -70,7 +70,7 @@ impl Snake {
 
     fn is_intersecting(&self) -> bool {
         let mut uniq = HashSet::new();
-        self.body.iter().all(move |x| uniq.insert(x))
+        self.body.iter().any(move |x| !uniq.insert(x))
     }
 
     fn head(&self) -> Pos {
@@ -80,11 +80,23 @@ impl Snake {
     fn len(&self) -> usize {
         self.body.len()
     }
+
+    fn turn(&mut self, dir: Dir) -> Dir {
+        let d1 = self.dir as isize;
+        let d2 = dir as isize;
+        if (d1 - d2).abs() != 2 {
+            self.dir = dir;
+        }
+
+        self.dir
+    }
 }
 
+#[derive(Default)]
 pub struct Summary {
     pub score: usize,
     pub steps: u32,
+    pub reward: f32,
 }
 
 /// A field for the game of snake
@@ -92,6 +104,7 @@ pub struct GrassyField<const S: usize> {
     snake: Snake,
     food: Pos,
     steps: u32,
+    reward: f32,
 }
 
 impl<const S: usize> GrassyField<S> {
@@ -100,22 +113,23 @@ impl<const S: usize> GrassyField<S> {
             snake: Snake::new(S),
             food: (1, 1),
             steps: 0,
+            reward: 0.0,
         }
     }
 
     pub fn score(&self) -> usize {
-        self.snake.len()
+        self.snake.len() - 1
     }
 
-    pub fn field_size(&self) -> usize {
+    pub const fn field_size(&self) -> usize {
         S
     }
 
     fn spawn_food(&mut self) {
         let occupied = HashSet::<&Pos>::from_iter(&self.snake.body);
         let mut vacant = Vec::with_capacity(S.pow(2) - self.snake.body.len());
-        for i in 1..S {
-            for j in 1..S {
+        for i in 1..=S {
+            for j in 1..=S {
                 let pos = (i, j);
                 if !occupied.contains(&pos) {
                     vacant.push(pos);
@@ -127,7 +141,7 @@ impl<const S: usize> GrassyField<S> {
     }
 
     fn is_in_bounds(&self, pos: Pos) -> bool {
-        pos >= (1, 1) && pos <= (S, S)
+        pos.0 >= 1 && pos.1 >= 1 && pos.0 <= S && pos.1 <= S
     }
 
     fn get_state(&self) -> Grid<S> {
@@ -157,13 +171,15 @@ impl<const S: usize> Environment for GrassyField<S> {
 
     fn summary(&self) -> Self::Summary {
         Summary {
-            score: self.snake.len() - 1,
+            score: self.score(),
             steps: self.steps,
+            reward: self.reward,
         }
     }
 
     fn reset(&mut self) -> Self::State {
         self.steps = 0;
+        self.reward = 0.0;
         self.snake = Snake::new(S);
         self.spawn_food();
         self.get_state()
@@ -174,8 +190,7 @@ impl<const S: usize> Environment for GrassyField<S> {
         let mut reward = -0.05;
         let head = self.snake.head();
 
-        self.snake.dir = action;
-        let t = action as isize;
+        let t = self.snake.turn(action) as isize;
         self.snake.body.push_front((
             (head.0 as isize + (t & 1) * (2 - t)) as usize,
             (head.1 as isize + ((t + 1) & 1) * (t - 1)) as usize,
@@ -188,10 +203,55 @@ impl<const S: usize> Environment for GrassyField<S> {
             self.snake.body.pop_back();
         }
 
-        if !self.is_active() {
-            (None, -1.0)
+        let next_state = if self.is_active() {
+            Some(self.get_state())
         } else {
-            (Some(self.get_state()), reward)
-        }
+            reward = -1.0;
+            None
+        };
+
+        self.reward += reward;
+        (next_state, reward)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn snake_actions() {
+        let snake = Snake {
+            body: VecDeque::from([(1, 1)]),
+            dir: Dir::Down,
+        };
+
+        let mut env = GrassyField::<6> {
+            snake,
+            food: (1, 2),
+            steps: 0,
+            reward: 0.0,
+        };
+
+        env.step(Dir::Down);
+        assert_eq!(env.snake.head(), (1, 2), "Down action works");
+
+        env.step(Dir::Right);
+        assert_eq!(env.snake.head(), (2, 2), "Right action works");
+
+        env.step(Dir::Right);
+        env.step(Dir::Up);
+        assert_eq!(env.snake.head(), (3, 1), "Up action works");
+
+        env.step(Dir::Left);
+        assert_eq!(env.snake.head(), (2, 1), "Left action works");
+
+        assert!(env.is_active(), "Env is active");
+
+        assert_ne!(env.food, (1, 2), "Food was moved after being eaten");
+
+        let summary = env.summary();
+        assert_eq!(summary.score, 1, "Summary score correct");
+        assert_eq!(summary.steps, 5, "Summary steps correct");
     }
 }
