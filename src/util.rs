@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 /// Asserts that a numerical value is in the provided interval `[a,b]` and panics
 /// with a helpful message if not
 ///
@@ -23,4 +25,8 @@ pub fn _format_float(float: f64, precision: usize) -> String {
         true => format!("{float:.precision$e}"),
         false => format!("{float:.precision$}"),
     }
+}
+
+pub fn summary_from_keys(keys: &[&'static str]) -> BTreeMap<&'static str, f64> {
+    keys.into_iter().map(|k| (*k, 0.0)).collect()
 }

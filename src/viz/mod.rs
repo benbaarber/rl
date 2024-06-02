@@ -22,7 +22,7 @@ pub enum State {
 
 pub struct Update {
     pub episode: u16,
-    pub data: Vec<(f64, f64)>,
+    pub data: Vec<f64>,
 }
 
 pub struct App {
@@ -35,15 +35,15 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(plots: &[&str], episodes: u16) -> Self {
+    pub fn new(keys: &[&str], episodes: u16) -> Self {
         Self {
             state: Default::default(),
             episode: 0,
             total_episodes: episodes,
-            plot_names: plots.iter().map(|p| String::from(*p)).collect(),
-            plots: plots
+            plot_names: keys.iter().map(|k| String::from(*k)).collect(),
+            plots: keys
                 .into_iter()
-                .map(|p| Plot::new(*p).with_x_bounds([0.0, episodes as f64]))
+                .map(|k| Plot::new(*k).with_x_bounds([0.0, episodes.into()]))
                 .collect(),
             selected_plot: 0,
         }
@@ -60,7 +60,7 @@ impl App {
                             Ok(Update { episode, data }) => {
                                 self.episode = episode;
                                 for (i, metric) in data.iter().enumerate() {
-                                    self.plots[i].update(*metric);
+                                    self.plots[i].update((episode as f64, *metric));
                                 }
                             }
                             Err(TryRecvError::Empty) => break,
@@ -143,6 +143,8 @@ impl Widget for &App {
         //     .title("Info")
         //     .render(horz[0], buf);
 
-        self.plots[self.selected_plot].render(vert[0], buf);
+        if self.plots.len() > 0 {
+            self.plots[self.selected_plot].render(vert[0], buf);
+        }
     }
 }

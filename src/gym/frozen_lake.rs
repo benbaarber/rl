@@ -1,4 +1,4 @@
-use crate::env::Environment;
+use crate::env::{Environment, Report};
 
 #[derive(PartialEq)]
 pub enum Square {
@@ -17,7 +17,6 @@ pub enum Move {
 }
 
 pub struct Summary {
-    pub won: bool,
     pub steps: u32,
     pub reward: f64,
 }
@@ -28,8 +27,7 @@ pub struct Summary {
 pub struct FrozenLake {
     map: [Square; 16],
     pos: usize,
-    steps: u32,
-    reward: f64,
+    pub report: Report,
 }
 
 impl FrozenLake {
@@ -56,8 +54,7 @@ impl FrozenLake {
         Self {
             map,
             pos: 0,
-            steps: 0,
-            reward: 0.0,
+            report: Report::new(vec!["reward", "steps"]),
         }
     }
 }
@@ -65,7 +62,6 @@ impl FrozenLake {
 impl Environment for FrozenLake {
     type State = usize;
     type Action = Move;
-    type Summary = Summary;
 
     fn actions(&self) -> Vec<Self::Action> {
         let mut actions = Vec::with_capacity(4);
@@ -86,32 +82,15 @@ impl Environment for FrozenLake {
         actions
     }
 
-    fn summary(&self) -> Self::Summary {
-        let won = self.map[self.pos] == Square::Goal;
-
-        Summary {
-            won,
-            steps: self.steps,
-            reward: self.reward,
-        }
-    }
-
     fn is_active(&self) -> bool {
         match self.map[self.pos] {
             Square::Frozen | Square::Start => true,
-            Square::Hole => {
-                println!("Agent fell into a hole after {} steps.", self.steps);
-                false
-            }
-            Square::Goal => {
-                println!("Agent reached the goal after {} steps!", self.steps);
-                false
-            }
+            Square::Hole | Square::Goal => false,
         }
     }
 
     fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32) {
-        self.steps += 1;
+        self.report.entry("step").and_modify(|x| *x += 1.0);
 
         match action {
             Move::Left => self.pos -= 1,
@@ -126,14 +105,12 @@ impl Environment for FrozenLake {
             _ => (Some(self.pos), -0.1),
         };
 
-        self.reward += reward as f64;
+        self.report.entry("reward").and_modify(|x| *x += reward);
 
-        (next_state, reward)
+        (next_state, reward as f32)
     }
 
     fn reset(&mut self) -> Self::State {
-        self.steps = 0;
-        self.reward = 0.0;
         self.pos = 0;
         self.pos
     }

@@ -30,12 +30,11 @@ pub trait QAgent {
 }
 
 /// A simple Q-learning agent that utilizes a Q-table to learn its environment
-pub struct QTableAgent<'a, E: Environment>
+pub struct QTableAgent<E: Environment>
 where
     E::State: Copy + Eq + Hash,
     E::Action: Copy + Eq + Hash,
 {
-    env: &'a mut E,
     q_table: HashMap<(E::State, E::Action), f32>,
     alpha: f32, // learning rate
     gamma: f32, // discount factor
@@ -43,7 +42,7 @@ where
     episode: u32, // current episode
 }
 
-impl<'a, E: Environment> QTableAgent<'a, E>
+impl<E: Environment> QTableAgent<E>
 where
     E::State: Copy + Eq + Hash,
     E::Action: Copy + Eq + Hash,
@@ -51,22 +50,15 @@ where
     /// Initialize a new `QAgent` in a given environment
     ///
     /// ### Parameters
-    /// - `env`: A simple [TableEnvironment]
     /// - `alpha`: The learning rate - must be between 0 and 1
     /// - `gamma`: The discount factor - must be between 0 and 1
     /// - `exploration`: A customized [EpsilonGreedy] policy
     ///
     /// **Panics** if `alpha` or `gamma` is not in the interval `[0,1]`
-    pub fn new(
-        env: &'a mut E,
-        alpha: f32,
-        gamma: f32,
-        exploration: EpsilonGreedy<decay::Exponential>,
-    ) -> Self {
+    pub fn new(alpha: f32, gamma: f32, exploration: EpsilonGreedy<decay::Exponential>) -> Self {
         assert_interval!(alpha, 0.0, 1.0);
         assert_interval!(gamma, 0.0, 1.0);
         Self {
-            env,
             q_table: HashMap::new(),
             alpha,
             gamma,
@@ -80,7 +72,7 @@ where
     }
 }
 
-impl<E: Environment> QTableAgent<'_, E>
+impl<E: Environment> QTableAgent<E>
 where
     E::State: Copy + Eq + Hash,
     E::Action: Copy + Eq + Hash,
@@ -124,14 +116,14 @@ where
         self.q_table.insert((state, action), weighted_q_value);
     }
 
-    pub fn go(&mut self) -> E::Summary {
-        let mut next_state = Some(self.env.reset());
-        let mut actions = self.env.actions();
+    pub fn go(&mut self, env: &mut E) {
+        let mut next_state = Some(env.reset());
+        let mut actions = env.actions();
         while let Some(state) = next_state {
             let action = self.act(state, &actions);
-            let (next, reward) = self.env.step(action);
+            let (next, reward) = env.step(action);
             next_state = next;
-            actions = self.env.actions();
+            actions = env.actions();
 
             self.learn(
                 Exp {
@@ -143,8 +135,5 @@ where
                 &actions,
             );
         }
-
-        self.episode += 1;
-        self.env.summary()
     }
 }

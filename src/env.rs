@@ -1,3 +1,10 @@
+use std::{
+    collections::BTreeMap,
+    ops::{Deref, DerefMut},
+};
+
+use crate::util::summary_from_keys;
+
 /// Represents a Markov decision process, defining the dynamics of an environment
 /// in which an agent can operate.
 ///
@@ -20,16 +27,13 @@ pub trait Environment {
     /// - `Clone`: When sampling batches of experiences, cloning is necessary
     type Action: Clone;
 
-    /// Relevant data to be returned after an episode summarizing the agent's performance
-    type Summary;
+    // /// Relevant data to be returned after an episode summarizing the agent's performance
+    // type Report;
 
     /// Get the available actions for the current state
     ///
     /// The returned slice should never be empty, instead specify an action that represents doing nothing if necessary.
     fn actions(&self) -> Vec<Self::Action>;
-
-    /// Summarize the current run of the environment for logging
-    fn summary(&self) -> Self::Summary;
 
     /// Update the environment in response to a an action taken by an agent, producing a new state and associated reward
     ///
@@ -44,5 +48,40 @@ pub trait Environment {
     /// Determine if the environment is in an active or terminal state
     fn is_active(&self) -> bool {
         true
+    }
+}
+
+pub struct Report {
+    keys: Vec<&'static str>,
+    map: BTreeMap<&'static str, f64>,
+}
+
+impl Report {
+    pub fn new(mut keys: Vec<&'static str>) -> Self {
+        keys.sort_unstable();
+        let map = summary_from_keys(&keys);
+        Self { keys, map }
+    }
+
+    pub fn keys(&self) -> &[&str] {
+        &self.keys
+    }
+
+    pub fn take(&mut self) -> BTreeMap<&'static str, f64> {
+        std::mem::replace(&mut self.map, summary_from_keys(&self.keys))
+    }
+}
+
+impl Deref for Report {
+    type Target = BTreeMap<&'static str, f64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.map
+    }
+}
+
+impl DerefMut for Report {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.map
     }
 }

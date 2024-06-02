@@ -6,7 +6,7 @@ use std::{
 use rand::{seq::IteratorRandom, thread_rng, Rng};
 use strum::{EnumIter, FromRepr, IntoEnumIterator, VariantArray};
 
-use crate::env::Environment;
+use crate::env::{Environment, Report};
 
 /// Position coordinates in the field with 1 unit of padding as a death zone
 type Pos = (usize, usize);
@@ -92,19 +92,11 @@ impl Snake {
     }
 }
 
-#[derive(Default)]
-pub struct Summary {
-    pub score: usize,
-    pub steps: u32,
-    pub reward: f32,
-}
-
 /// A field for the game of snake
 pub struct GrassyField<const S: usize> {
     snake: Snake,
     food: Pos,
-    steps: u32,
-    reward: f32,
+    pub report: Report,
 }
 
 impl<const S: usize> GrassyField<S> {
@@ -112,8 +104,7 @@ impl<const S: usize> GrassyField<S> {
         Self {
             snake: Snake::new(S),
             food: (1, 1),
-            steps: 0,
-            reward: 0.0,
+            report: Report::new(vec!["score", "reward", "steps"]),
         }
     }
 
@@ -159,7 +150,6 @@ impl<const S: usize> GrassyField<S> {
 impl<const S: usize> Environment for GrassyField<S> {
     type State = Grid<S>;
     type Action = Dir;
-    type Summary = Summary;
 
     fn actions(&self) -> Vec<Self::Action> {
         Dir::VARIANTS.to_vec()
@@ -169,24 +159,14 @@ impl<const S: usize> Environment for GrassyField<S> {
         self.is_in_bounds(self.snake.head()) && !self.snake.is_intersecting()
     }
 
-    fn summary(&self) -> Self::Summary {
-        Summary {
-            score: self.score(),
-            steps: self.steps,
-            reward: self.reward,
-        }
-    }
-
     fn reset(&mut self) -> Self::State {
-        self.steps = 0;
-        self.reward = 0.0;
         self.snake = Snake::new(S);
         self.spawn_food();
         self.get_state()
     }
 
     fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32) {
-        self.steps += 1;
+        self.report.entry("steps").and_modify(|x| *x += 1.0);
         let mut reward = -0.05;
         let head = self.snake.head();
 
@@ -210,13 +190,14 @@ impl<const S: usize> Environment for GrassyField<S> {
             None
         };
 
-        self.reward += reward;
-        (next_state, reward)
+        self.report.entry("reward").and_modify(|x| *x += reward);
+        (next_state, reward as f32)
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -229,8 +210,7 @@ mod tests {
         let mut env = GrassyField::<6> {
             snake,
             food: (1, 2),
-            steps: 0,
-            reward: 0.0,
+            report: Report::new(vec!["score", "reward", "steps"]),
         };
 
         env.step(Dir::Down);
@@ -250,8 +230,8 @@ mod tests {
 
         assert_ne!(env.food, (1, 2), "Food was moved after being eaten");
 
-        let summary = env.summary();
-        assert_eq!(summary.score, 1, "Summary score correct");
-        assert_eq!(summary.steps, 5, "Summary steps correct");
+        let report = env.report.take();
+        assert_eq!(*report.get("score").unwrap(), 1.0, "Report score correct");
+        assert_eq!(*report.get("steps").unwrap(), 5.0, "Report steps correct");
     }
 }

@@ -1,15 +1,16 @@
 use burn::{
-    nn::loss::{HuberLoss, HuberLossConfig, Reduction},
+    nn::loss::Reduction,
     optim::{AdamWConfig, GradientsParams, Optimizer},
     prelude::*,
 };
+use nn::loss::MseLoss;
 use rand::{seq::IteratorRandom, thread_rng};
 use rl::{
     decay,
     env::Environment,
     exploration::{Choice, EpsilonGreedy},
     gym::{
-        grassy_field::{self, Dir, Grid},
+        grassy_field::{Dir, Grid},
         GrassyField,
     },
     memory::{Exp, ReplayMemory},
@@ -21,12 +22,11 @@ use crate::{
     DQNAutodiffBackend as B, DEVICE, FIELD_SIZE,
 };
 
-pub struct SnakeDQN<'a> {
-    env: &'a mut GrassyField<FIELD_SIZE>,
+pub struct SnakeDQN {
     policy_net: Model<B>,
     target_net: Model<B>,
     memory: ReplayMemory<GrassyField<FIELD_SIZE>>,
-    loss: HuberLoss<B>,
+    loss: MseLoss<B>,
     exploration: EpsilonGreedy<decay::Exponential>,
     gamma: f32,
     tau: f32,
@@ -34,19 +34,13 @@ pub struct SnakeDQN<'a> {
     episode: u32,
 }
 
-impl<'a> SnakeDQN<'a> {
-    pub fn new(
-        env: &'a mut GrassyField<FIELD_SIZE>,
-        model_config: ModelConfig,
-        loss_config: HuberLossConfig,
-        exploration: EpsilonGreedy<decay::Exponential>,
-    ) -> Self {
+impl SnakeDQN {
+    pub fn new(model_config: ModelConfig, exploration: EpsilonGreedy<decay::Exponential>) -> Self {
         Self {
-            env,
             policy_net: model_config.init(&*DEVICE),
             target_net: model_config.init(&*DEVICE),
             memory: ReplayMemory::new(50000),
-            loss: loss_config.init(&*DEVICE),
+            loss: MseLoss::new(),
             exploration,
             gamma: 0.86,
             tau: 2.7e-2,
@@ -59,14 +53,13 @@ impl<'a> SnakeDQN<'a> {
 type State = Grid<FIELD_SIZE>;
 type Action = Dir;
 
-impl SnakeDQN<'_> {
+impl SnakeDQN {
     fn act(&self, state: State, _actions: &[Action]) -> Action {
         match self.exploration.choose(self.episode) {
             Choice::Explore => Dir::iter().choose(&mut thread_rng()).unwrap(),
             Choice::Exploit => {
-                let size = self.env.field_size();
-                let field_tensor =
-                    Tensor::<B, 2>::from_floats(state, &*DEVICE).reshape([1, size, size]);
+                let field_tensor = Tensor::<B, 2>::from_floats(state, &*DEVICE)
+                    .reshape([1, FIELD_SIZE, FIELD_SIZE]);
                 let choice = self
                     .policy_net
                     .forward(field_tensor)
@@ -92,7 +85,6 @@ impl SnakeDQN<'_> {
         }
         let non_terminal_mask = Tensor::<B, 1, Bool>::from_bool(non_terminal_mask.into(), &*DEVICE);
 
-        let field_size = self.env.field_size();
         let next_states = Tensor::<B, 3>::cat(
             batch
                 .next_states
@@ -104,7 +96,7 @@ impl SnakeDQN<'_> {
         );
 
         let states = Tensor::<B, 3>::from_floats(batch.states, &*DEVICE)
-            .reshape([0, field_size, field_size]);
+            .reshape([0, FIELD_SIZE, FIELD_SIZE]);
         let actions = Tensor::<B, 1, Int>::from_ints(
             Data::new(
                 batch
@@ -142,17 +134,17 @@ impl SnakeDQN<'_> {
         self.target_net = target_net.soft_update(&self.policy_net, self.tau);
     }
 
-    pub fn go(&mut self) -> grassy_field::Summary {
-        let mut next_state = Some(self.env.reset());
+    pub fn go(&mut self, env: &mut GrassyField<FIELD_SIZE>) {
+        let mut next_state = Some(env.reset());
         let mut optimizer = AdamWConfig::new()
             .with_epsilon(3.58e-3)
             .init::<B, Model<B>>();
 
         while let Some(state) = next_state {
-            let actions = self.env.actions();
+            let actions = env.actions();
             let action = self.act(state, &actions);
             // println!("Action: {:?}", action);
-            let (next, reward) = self.env.step(action);
+            let (next, reward) = env.step(action);
             next_state = next;
 
             self.memory.push(Exp {
@@ -165,7 +157,7 @@ impl SnakeDQN<'_> {
             self.learn(&mut optimizer);
         }
 
-        self.episode += 1;
-        self.env.summary()
+        let score = env.score() as f64;
+        env.report.entry("score").and_modify(|x| *x += score);
     }
 }
