@@ -135,5 +135,7 @@ where
                 &actions,
             );
         }
+
+        self.episode += 1;
     }
 }

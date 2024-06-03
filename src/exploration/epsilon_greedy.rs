@@ -18,7 +18,6 @@ impl<D: Decay> EpsilonGreedy<D> {
     /// Invoke epsilon greedy policy for current episode
     pub fn choose(&self, episode: u32) -> Choice {
         let epsilon = self.epsilon.evaluate(episode as f32);
-        // println!("epsilon: {:?}", epsilon);
         if thread_rng().gen::<f32>() > epsilon {
             Choice::Exploit
         } else {

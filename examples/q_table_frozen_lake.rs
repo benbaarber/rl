@@ -1,15 +1,10 @@
 use std::{sync::mpsc, thread};
 
-use rl::{
-    algo::QTableAgent,
-    decay,
-    exploration::EpsilonGreedy,
-    gym::FrozenLake,
-    viz::{self, App},
-};
+use rl::{algo::QTableAgent, decay, exploration::EpsilonGreedy, gym::FrozenLake, viz};
+
+const NUM_EPISODES: u16 = 10000;
 
 fn main() {
-    const NUM_EPISODES: u16 = 10000;
     let mut env = FrozenLake::new();
     let mut agent = QTableAgent::new(
         0.7,
@@ -17,7 +12,7 @@ fn main() {
         EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.01).unwrap()),
     );
 
-    let mut app = App::new(env.report.keys(), NUM_EPISODES);
+    let mut app = viz::App::new(env.report.keys(), NUM_EPISODES);
     let (tx, rx) = mpsc::channel();
 
     let app_handle = thread::spawn(move || app.run(rx));

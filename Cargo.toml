@@ -18,4 +18,5 @@ ratatui = "0.26.3"
 strum = { version = "0.26.2", features = ["derive"], optional = true }
 
 [dev-dependencies]
+clap = { version = "4.5.4", features = ["derive"] }
 once_cell = "1.19.0"

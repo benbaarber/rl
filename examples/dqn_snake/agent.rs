@@ -157,6 +157,7 @@ impl SnakeDQN {
             self.learn(&mut optimizer);
         }
 
+        self.episode += 1;
         let score = env.score() as f64;
         env.report.entry("score").and_modify(|x| *x += score);
     }

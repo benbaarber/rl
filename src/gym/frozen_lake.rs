@@ -16,11 +16,6 @@ pub enum Move {
     Up = 3,
 }
 
-pub struct Summary {
-    pub steps: u32,
-    pub reward: f64,
-}
-
 /// A very simple RL environment taken from Python [gymnasium](https://gymnasium.farama.org/)
 ///
 /// Intended for use with a [QTableAgent](crate::algo::QTableAgent)
@@ -90,7 +85,7 @@ impl Environment for FrozenLake {
     }
 
     fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32) {
-        self.report.entry("step").and_modify(|x| *x += 1.0);
+        self.report.entry("steps").and_modify(|x| *x += 1.0);
 
         match action {
             Move::Left => self.pos -= 1,
