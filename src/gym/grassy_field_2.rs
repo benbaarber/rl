@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashSet, VecDeque},
-    ops::{Index, IndexMut},
-};
+use std::collections::{HashSet, VecDeque};
 
 use rand::{seq::IteratorRandom, thread_rng, Rng};
 use strum::{EnumIter, FromRepr, IntoEnumIterator, VariantArray};
@@ -11,39 +8,7 @@ use crate::env::{Environment, Report};
 /// Position coordinates in the field with 1 unit of padding as a death zone
 type Pos = (usize, usize);
 
-pub type Grid<const S: usize> = [[f32; S]; S];
-
-struct IGrid<const S: usize> {
-    grid: Grid<S>,
-}
-
-impl<const S: usize> IGrid<S> {
-    fn new() -> Self {
-        Self {
-            grid: [[0.0; S]; S],
-        }
-    }
-
-    fn take(self) -> Grid<S> {
-        self.grid
-    }
-}
-
-impl<const S: usize> Index<&Pos> for IGrid<S> {
-    type Output = f32;
-
-    fn index(&self, index: &Pos) -> &Self::Output {
-        &self.grid[index.0 - 1][index.1 - 1]
-    }
-}
-
-impl<const S: usize> IndexMut<&Pos> for IGrid<S> {
-    fn index_mut(&mut self, index: &Pos) -> &mut Self::Output {
-        &mut self.grid[index.0 - 1][index.1 - 1]
-    }
-}
-
-#[derive(EnumIter, VariantArray, FromRepr, Clone, Copy, Debug)]
+#[derive(EnumIter, VariantArray, FromRepr, Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum Dir {
     Up = 0,
     Right = 1,
@@ -93,13 +58,13 @@ impl Snake {
 }
 
 /// A field for the game of snake
-pub struct GrassyField<const S: usize> {
+pub struct GrassyField2<const S: usize> {
     snake: Snake,
     food: Pos,
     pub report: Report,
 }
 
-impl<const S: usize> GrassyField<S> {
+impl<const S: usize> GrassyField2<S> {
     pub fn new() -> Self {
         Self {
             snake: Snake::new(S),
@@ -128,27 +93,47 @@ impl<const S: usize> GrassyField<S> {
             }
         }
 
-        self.food = vacant.into_iter().choose(&mut thread_rng()).unwrap();
+        self.food = vacant
+            .into_iter()
+            .choose(&mut thread_rng())
+            .unwrap_or((1, 1));
     }
 
     fn is_in_bounds(&self, pos: Pos) -> bool {
         pos.0 >= 1 && pos.1 >= 1 && pos.0 <= S && pos.1 <= S
     }
 
-    fn get_state(&self) -> Grid<S> {
-        let mut state = IGrid::new();
-        state[&self.food] = 1.0;
-        state[&self.snake.head()] = -0.5;
-        for segment in self.snake.body.iter().skip(1) {
-            state[segment] = -1.0;
+    /// Get environment state as an array of boolean features
+    ///
+    /// `[facing_up, facing_right, facing_down, facing_left, food_up, food_right, food_down, food_left, danger_up, danger_right, danger_down, danger_left]`
+    fn get_state(&self) -> [bool; 12] {
+        let mut features = [false; 12];
+
+        features[self.snake.dir as usize] = true;
+
+        let head = self.snake.head();
+        if self.food.1 > head.1 {
+            features[6] = true;
+        } else if self.food.1 < head.1 {
+            features[4] = true;
+        }
+        if self.food.0 > head.0 {
+            features[5] = true;
+        } else if self.food.0 < head.0 {
+            features[7] = true;
         }
 
-        state.take()
+        for (i, dir) in Dir::iter().enumerate() {
+            let pos = step_dir(head, dir);
+            features[8 + i] = !self.is_in_bounds(pos) || self.snake.body.contains(&pos);
+        }
+
+        features
     }
 }
 
-impl<const S: usize> Environment for GrassyField<S> {
-    type State = Grid<S>;
+impl<const S: usize> Environment for GrassyField2<S> {
+    type State = [bool; 12];
     type Action = Dir;
 
     fn actions(&self) -> Vec<Self::Action> {
@@ -156,7 +141,9 @@ impl<const S: usize> Environment for GrassyField<S> {
     }
 
     fn is_active(&self) -> bool {
-        self.is_in_bounds(self.snake.head()) && !self.snake.is_intersecting()
+        self.is_in_bounds(self.snake.head())
+            && !self.snake.is_intersecting()
+            && self.snake.len() < S * S
     }
 
     fn reset(&mut self) -> Self::State {
@@ -167,7 +154,7 @@ impl<const S: usize> Environment for GrassyField<S> {
 
     fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32) {
         self.report.entry("steps").and_modify(|x| *x += 1.0);
-        let mut reward = -0.05;
+        let mut reward = -0.01;
 
         let head = self.snake.head();
         let dir = self.snake.turn(action);
@@ -175,6 +162,7 @@ impl<const S: usize> Environment for GrassyField<S> {
         self.snake.body.push_front(new_head);
 
         if self.snake.head() == self.food {
+            self.report.entry("score").and_modify(|x| *x += 1.0);
             self.spawn_food();
             reward = 1.0;
         } else {
@@ -184,7 +172,7 @@ impl<const S: usize> Environment for GrassyField<S> {
         let next_state = if self.is_active() {
             Some(self.get_state())
         } else {
-            reward = -1.0;
+            reward = if self.snake.len() < S * S { -10.0 } else { 1.0 };
             None
         };
 
@@ -213,7 +201,7 @@ mod tests {
             dir: Dir::Down,
         };
 
-        let mut env = GrassyField::<6> {
+        let mut env = GrassyField2::<6> {
             snake,
             food: (1, 2),
             report: Report::new(vec!["score", "reward", "steps"]),
