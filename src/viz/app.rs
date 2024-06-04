@@ -20,11 +20,13 @@ pub enum State {
     Quit,
 }
 
+/// Format for updating plot data
 pub struct Update {
     pub episode: u16,
     pub data: Vec<f64>,
 }
 
+/// The root TUI component which holds the main app state and runs the render loop
 pub struct App {
     state: State,
     episode: u16,
@@ -34,16 +36,19 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(keys: &[&'static str], episodes: u16) -> Self {
+    pub fn new(plots: &[&'static str], episodes: u16) -> Self {
         Self {
             state: Default::default(),
             episode: 0,
             total_episodes: episodes,
             selected_tab: 0,
-            plots: Plots::new(keys.to_vec(), episodes),
+            plots: Plots::new(plots.to_vec(), episodes),
         }
     }
 
+    /// Initialize the terminal and run the main loop
+    ///
+    /// Restores the terminal on exit
     pub fn run(&mut self, plot_rx: Receiver<Update>) -> io::Result<()> {
         let mut terminal = tui::init()?;
 

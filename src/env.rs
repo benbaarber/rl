@@ -51,22 +51,31 @@ pub trait Environment {
     }
 }
 
+/// A format for reporting training results to [viz](crate::viz)
+///
+/// Functionally a wrapper around a [BTreeMap] such that values are always returned in the same order.
+/// Meant to be initialized once and used for the lifetime of an [Environment].
+/// 
+/// See examples for implementation
 pub struct Report {
     keys: Vec<&'static str>,
     map: BTreeMap<&'static str, f64>,
 }
 
 impl Report {
+    /// Create a new report format
     pub fn new(mut keys: Vec<&'static str>) -> Self {
         keys.sort_unstable();
         let map = summary_from_keys(&keys);
         Self { keys, map }
     }
 
+    /// Get keys as a slice
     pub fn keys(&self) -> &[&'static str] {
         &self.keys
     }
 
+    /// Take the report by extracting the inner map and leaving a default
     pub fn take(&mut self) -> BTreeMap<&'static str, f64> {
         std::mem::replace(&mut self.map, summary_from_keys(&self.keys))
     }

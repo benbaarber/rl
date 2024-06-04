@@ -18,7 +18,7 @@ pub trait QAgent {
         actions: &[<Self::Env as Environment>::Action],
     ) -> <Self::Env as Environment>::Action;
 
-    /// Update the agent's policy after an [Experience]
+    /// Update the agent's policy after an [Experience](Exp)
     fn learn(
         &mut self,
         experience: Exp<Self::Env>,
