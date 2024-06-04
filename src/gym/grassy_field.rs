@@ -175,6 +175,7 @@ impl<const S: usize> Environment for GrassyField<S> {
         self.snake.body.push_front(new_head);
 
         if self.snake.head() == self.food {
+            self.report.entry("score").and_modify(|x| *x += 1.0);
             self.spawn_food();
             reward = 1.0;
         } else {
@@ -215,7 +216,7 @@ mod tests {
 
         let mut env = GrassyField::<6> {
             snake,
-            food: (1, 2),
+            food: (2, 1),
             report: Report::new(vec!["score", "reward", "steps"]),
         };
 
@@ -234,7 +235,7 @@ mod tests {
 
         assert!(env.is_active(), "Env is active");
 
-        assert_ne!(env.food, (1, 2), "Food was moved after being eaten");
+        assert_ne!(env.food, (2, 1), "Food was moved after being eaten");
 
         let report = env.report.take();
         assert_eq!(*report.get("score").unwrap(), 1.0, "Report score correct");

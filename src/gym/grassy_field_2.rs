@@ -203,7 +203,7 @@ mod tests {
 
         let mut env = GrassyField2::<6> {
             snake,
-            food: (1, 2),
+            food: (2, 1),
             report: Report::new(vec!["score", "reward", "steps"]),
         };
 
@@ -222,7 +222,7 @@ mod tests {
 
         assert!(env.is_active(), "Env is active");
 
-        assert_ne!(env.food, (1, 2), "Food was moved after being eaten");
+        assert_ne!(env.food, (2, 1), "Food was moved after being eaten");
 
         let report = env.report.take();
         assert_eq!(*report.get("score").unwrap(), 1.0, "Report score correct");

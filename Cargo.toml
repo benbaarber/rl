@@ -1,9 +1,9 @@
 [package]
 name = "rl"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
-description = "Rusty reinforcement learning"
+description = "A reinforcement learning library"
 keywords = ["rl", "ml", "machine-learning", "ai"]
 repository = "https://github.com/benbaarber/rl"
 
@@ -19,6 +19,3 @@ rand = { version = "0.8.5", features = ["alloc"] }
 ratatui = "0.26.3"
 strum = { version = "0.26.2", features = ["derive"], optional = true }
 tui-logger = "0.11.1"
-
-[dev-dependencies]
-clap = { version = "4.5.4", features = ["derive"] }

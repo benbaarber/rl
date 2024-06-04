@@ -55,7 +55,7 @@ pub trait Environment {
 ///
 /// Functionally a wrapper around a [BTreeMap] such that values are always returned in the same order.
 /// Meant to be initialized once and used for the lifetime of an [Environment].
-/// 
+///
 /// See examples for implementation
 pub struct Report {
     keys: Vec<&'static str>,
