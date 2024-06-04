@@ -1,8 +1,6 @@
-use ratatui::{
-    prelude::*,
-    style::Stylize,
-    widgets::{block::Title, *},
-};
+use ratatui::{prelude::*, style::Stylize, widgets::*};
+
+use crate::viz::Update;
 
 pub struct Plot {
     pub x_title: String,
@@ -106,8 +104,8 @@ impl Widget for &Plot {
 
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
-            .title(Title::from("Plots").alignment(Alignment::Center))
-            .padding(Padding::uniform(10));
+            .title("Plots")
+            .padding(Padding::uniform(4));
 
         let chart = Chart::new(vec![dataset])
             .block(block)
@@ -115,5 +113,60 @@ impl Widget for &Plot {
             .y_axis(y_axis);
 
         chart.render(area, buf);
+    }
+}
+
+pub struct Plots {
+    plot_names: Vec<&'static str>,
+    plots: Vec<Plot>,
+    selected: usize,
+}
+
+impl Plots {
+    pub fn new(names: Vec<&'static str>, episodes: u16) -> Self {
+        let plots = names
+            .iter()
+            .map(|k| Plot::new(*k).with_x_bounds([0.0, episodes.into()]))
+            .collect();
+        Self {
+            plot_names: names,
+            plots,
+            selected: 0,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.plot_names.len()
+    }
+
+    pub fn next_plot(&mut self) {
+        self.selected = (self.selected + 1) % self.len()
+    }
+
+    pub fn prev_plot(&mut self) {
+        let len = self.len();
+        self.selected = (self.selected + len - 1) % len;
+    }
+
+    pub fn update(&mut self, update: Update) {
+        let Update { episode, data } = update;
+        for (i, metric) in data.iter().enumerate() {
+            self.plots[i].update((episode as f64, *metric));
+        }
+    }
+}
+
+impl Widget for &Plots {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        Tabs::new(self.plot_names.iter().copied())
+            .block(Block::default().padding(Padding::uniform(2)))
+            .white()
+            .highlight_style(Style::default().light_green())
+            .select(self.selected)
+            .render(area, buf);
+
+        if self.plots.len() > 0 {
+            self.plots[self.selected].render(area, buf);
+        }
     }
 }

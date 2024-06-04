@@ -63,7 +63,7 @@ impl Report {
         Self { keys, map }
     }
 
-    pub fn keys(&self) -> &[&str] {
+    pub fn keys(&self) -> &[&'static str] {
         &self.keys
     }
 

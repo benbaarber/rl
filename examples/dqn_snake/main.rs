@@ -1,5 +1,3 @@
-use std::{sync::mpsc, thread};
-
 use agent::SnakeDQN;
 use burn::backend::{wgpu, Autodiff, Wgpu};
 use model::ModelConfig;
@@ -23,9 +21,7 @@ fn main() {
     let model_config = ModelConfig::new(FIELD_SIZE, 32, 128, 64, 128);
     let exploration = EpsilonGreedy::new(decay::Exponential::new(1e-5, 0.915, 0.1).unwrap());
 
-    let mut app = viz::App::new(env.report.keys(), NUM_EPISODES);
-    let (tx, rx) = mpsc::channel();
-    let app_handle = thread::spawn(move || app.run(rx));
+    let (handle, tx) = viz::init(env.report.keys(), NUM_EPISODES);
 
     let mut agent = SnakeDQN::new(model_config, exploration);
 
@@ -42,5 +38,5 @@ fn main() {
         .unwrap();
     }
 
-    let _ = app_handle.join();
+    let _ = handle.join();
 }

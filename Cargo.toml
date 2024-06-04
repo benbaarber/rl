@@ -13,10 +13,12 @@ gym = ["dep:strum"]
 [dependencies]
 burn = { version = "0.13.2", features = ["wgpu", "autodiff"] }
 crossterm = "0.27.0"
+log = { version = "0.4.21", features = ["std"] }
+once_cell = "1.19.0"
 rand = { version = "0.8.5", features = ["alloc"] }
 ratatui = "0.26.3"
 strum = { version = "0.26.2", features = ["derive"], optional = true }
+tui-logger = "0.11.1"
 
 [dev-dependencies]
 clap = { version = "4.5.4", features = ["derive"] }
-once_cell = "1.19.0"

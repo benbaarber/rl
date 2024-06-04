@@ -1,5 +1,3 @@
-use std::{sync::mpsc, thread};
-
 use rl::{algo::QTableAgent, decay, exploration::EpsilonGreedy, gym::FrozenLake, viz};
 
 const NUM_EPISODES: u16 = 10000;
@@ -12,10 +10,7 @@ fn main() {
         EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.01).unwrap()),
     );
 
-    let mut app = viz::App::new(env.report.keys(), NUM_EPISODES);
-    let (tx, rx) = mpsc::channel();
-
-    let app_handle = thread::spawn(move || app.run(rx));
+    let (handle, tx) = viz::init(env.report.keys(), NUM_EPISODES);
 
     for i in 0..NUM_EPISODES {
         agent.go(&mut env);
@@ -27,5 +22,5 @@ fn main() {
         .unwrap();
     }
 
-    let _ = app_handle.join();
+    let _ = handle.join();
 }
