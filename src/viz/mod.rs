@@ -32,8 +32,8 @@ pub fn init(plots: &[&'static str], episodes: u16) -> (JoinHandle<io::Result<()>
     tui_logger::set_default_level(log::LevelFilter::Trace);
 
     let mut app = App::new(plots, episodes);
-    let (plot_tx, plot_rx) = mpsc::channel();
-    let handle = thread::spawn(move || app.run(plot_rx));
+    let (tx, rx) = mpsc::channel();
+    let handle = thread::spawn(move || app.run(rx));
 
-    (handle, plot_tx)
+    (handle, tx)
 }

@@ -1,4 +1,9 @@
-use ratatui::{prelude::*, style::Stylize, widgets::*};
+use super::heatmap_scatter_plot::{Axis, Dataset, HeatmapScatterPlot, Hsl};
+use ratatui::{
+    prelude::*,
+    style::Stylize,
+    widgets::{Block, BorderType, Padding, Tabs},
+};
 
 use crate::viz::Update;
 
@@ -74,8 +79,7 @@ impl Widget for &Plot {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let dataset = Dataset::default()
             .marker(Marker::Braille)
-            .graph_type(GraphType::Scatter)
-            .cyan()
+            .gradient((Hsl(173.0, 96.0, 50.0), Hsl(352.0, 94.0, 50.0)))
             .data(&self.data);
 
         let x_axis = Axis::default()
@@ -107,7 +111,7 @@ impl Widget for &Plot {
             .title("Plots")
             .padding(Padding::uniform(4));
 
-        let chart = Chart::new(vec![dataset])
+        let chart = HeatmapScatterPlot::new(dataset)
             .block(block)
             .x_axis(x_axis)
             .y_axis(y_axis);

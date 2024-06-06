@@ -49,14 +49,14 @@ impl App {
     /// Initialize the terminal and run the main loop
     ///
     /// Restores the terminal on exit
-    pub fn run(&mut self, plot_rx: Receiver<Update>) -> io::Result<()> {
+    pub fn run(&mut self, rx: Receiver<Update>) -> io::Result<()> {
         let mut terminal = tui::init()?;
 
         loop {
             match self.state {
                 State::Train => {
                     loop {
-                        match plot_rx.try_recv() {
+                        match rx.try_recv() {
                             Ok(update) => {
                                 self.episode = update.episode;
                                 self.plots.update(update)
