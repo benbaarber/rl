@@ -35,4 +35,4 @@ required-features = ["gym"]
 
 [[example]]
 name = "dqn_cartpole"
-required_features = ["gym"]
+required-features = ["gym"]

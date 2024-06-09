@@ -17,7 +17,7 @@ const NUM_EPISODES: u16 = 50000;
 const UPDATE_FREQ: u16 = 10;
 
 fn main() {
-    let mut env = CartPole::new(RenderMode::Human);
+    let mut env = CartPole::new(RenderMode::None);
 
     let model_config = ModelConfig::new(32, 64);
     let exploration = EpsilonGreedy::new(decay::Exponential::new(1e-5, 0.915, 0.1).unwrap());

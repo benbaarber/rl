@@ -74,8 +74,8 @@ impl Agent {
         match self.exploration.choose(self.episode) {
             Choice::Explore => CPAction::iter().choose(&mut thread_rng()).unwrap(),
             Choice::Exploit => {
-                let input = Tensor::<B, 1>::from_floats(state, &*DEVICE).unsqueeze_dim(1);
-                let output = self.policy_net.forward(input).argmax(0).into_scalar();
+                let input = Tensor::<B, 2>::from_floats([state], &*DEVICE);
+                let output = self.policy_net.forward(input).argmax(1).into_scalar();
                 CPAction::from_repr(output.try_into().unwrap()).unwrap()
             }
         }
@@ -105,10 +105,7 @@ impl Agent {
             0,
         );
 
-        eprintln!("Next states: {:?}", next_states.shape());
-
         let states = Tensor::<B, 2>::from_floats(batch.states, &*DEVICE);
-        eprintln!("States: {:?}", states.shape());
         let actions = Tensor::<B, 1, Int>::from_ints(
             Data::new(
                 batch
@@ -120,9 +117,7 @@ impl Agent {
             ),
             &*DEVICE,
         );
-        eprintln!("Actions: {:?}", actions.shape());
         let rewards = Tensor::<B, 1>::from_floats(batch.rewards, &*DEVICE);
-        eprintln!("Rewards: {:?}", rewards.shape());
 
         let q_values = self
             .policy_net

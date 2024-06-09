@@ -52,6 +52,8 @@ impl Environment for CartPole {
             Some(obs2arr(observation))
         };
 
+        self.report.entry("reward").and_modify(|x| *x += *reward);
+
         (next_state, *reward as f32)
     }
 
