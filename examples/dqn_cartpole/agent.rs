@@ -1,32 +1,48 @@
+// use burn::prelude::*;
+// use rl::env::Environment;
+
+// pub struct Agent<E, B, M, L, Exp>
+// where
+//     E: Environment,
+//     B: Backend,
+//     M: Module<B>,
+// {
+//     policy_net: Model<B>,
+//     target_net: Model<B>,
+//     memory: ReplayMemory<GrassyField<FIELD_SIZE>>,
+//     loss: MseLoss<B>,
+//     exploration: EpsilonGreedy<decay::Exponential>,
+//     gamma: f32,
+//     tau: f32,
+//     lr: f32,
+//     episode: u32,
+// }
+
 use burn::{
-    nn::loss::Reduction,
     optim::{AdamWConfig, GradientsParams, Optimizer},
     prelude::*,
 };
-use nn::loss::MseLoss;
+use nn::loss::{HuberLoss, HuberLossConfig, Reduction};
 use rand::{seq::IteratorRandom, thread_rng};
 use rl::{
     decay,
-    env::{DiscreteActionSpace, Environment},
+    env::Environment,
     exploration::{Choice, EpsilonGreedy},
-    gym::{
-        grassy_field::{Dir, Grid},
-        GrassyField,
-    },
+    gym::{cart_pole::CPAction, CartPole},
     memory::{Exp, ReplayMemory},
 };
 use strum::IntoEnumIterator;
 
 use crate::{
     model::{Model, ModelConfig},
-    DQNAutodiffBackend as B, DEVICE, FIELD_SIZE,
+    DQNAutodiffBackend as B, DEVICE,
 };
 
 pub struct Agent {
     policy_net: Model<B>,
     target_net: Model<B>,
-    memory: ReplayMemory<GrassyField<FIELD_SIZE>>,
-    loss: MseLoss<B>,
+    memory: ReplayMemory<CartPole>,
+    loss: HuberLoss<B>,
     exploration: EpsilonGreedy<decay::Exponential>,
     gamma: f32,
     tau: f32,
@@ -40,7 +56,7 @@ impl Agent {
             policy_net: model_config.init(&*DEVICE),
             target_net: model_config.init(&*DEVICE),
             memory: ReplayMemory::new(50000),
-            loss: MseLoss::new(),
+            loss: HuberLossConfig::new(1.35).init(&*DEVICE), // Make delta a hyperparameter
             exploration,
             gamma: 0.86,
             tau: 2.7e-2,
@@ -50,23 +66,17 @@ impl Agent {
     }
 }
 
-type State = Grid<FIELD_SIZE>;
-type Action = Dir;
+type State = [f32; 4];
+type Action = CPAction;
 
 impl Agent {
-    fn act(&self, state: State, _actions: &[Action]) -> Action {
+    fn act(&self, state: State) -> Action {
         match self.exploration.choose(self.episode) {
-            Choice::Explore => Dir::iter().choose(&mut thread_rng()).unwrap(),
+            Choice::Explore => CPAction::iter().choose(&mut thread_rng()).unwrap(),
             Choice::Exploit => {
-                let field_tensor = Tensor::<B, 2>::from_floats(state, &*DEVICE)
-                    .reshape([1, FIELD_SIZE, FIELD_SIZE]);
-                let choice = self
-                    .policy_net
-                    .forward(field_tensor)
-                    .squeeze::<1>(0)
-                    .argmax(0)
-                    .into_scalar();
-                Dir::from_repr(choice.try_into().unwrap()).unwrap()
+                let input = Tensor::<B, 1>::from_floats(state, &*DEVICE).unsqueeze_dim(1);
+                let output = self.policy_net.forward(input).argmax(0).into_scalar();
+                CPAction::from_repr(output.try_into().unwrap()).unwrap()
             }
         }
     }
@@ -85,18 +95,20 @@ impl Agent {
         }
         let non_terminal_mask = Tensor::<B, 1, Bool>::from_bool(non_terminal_mask.into(), &*DEVICE);
 
-        let next_states = Tensor::<B, 3>::cat(
+        let next_states = Tensor::<B, 2>::cat(
             batch
                 .next_states
                 .into_iter()
                 .flatten()
-                .map(|ns| Tensor::<B, 3>::from_floats([ns], &*DEVICE))
+                .map(|ns| Tensor::<B, 2>::from_floats([ns], &*DEVICE))
                 .collect::<Vec<_>>(),
             0,
         );
 
-        let states = Tensor::<B, 3>::from_floats(batch.states, &*DEVICE)
-            .reshape([0, FIELD_SIZE, FIELD_SIZE]);
+        eprintln!("Next states: {:?}", next_states.shape());
+
+        let states = Tensor::<B, 2>::from_floats(batch.states, &*DEVICE);
+        eprintln!("States: {:?}", states.shape());
         let actions = Tensor::<B, 1, Int>::from_ints(
             Data::new(
                 batch
@@ -108,7 +120,9 @@ impl Agent {
             ),
             &*DEVICE,
         );
+        eprintln!("Actions: {:?}", actions.shape());
         let rewards = Tensor::<B, 1>::from_floats(batch.rewards, &*DEVICE);
+        eprintln!("Rewards: {:?}", rewards.shape());
 
         let q_values = self
             .policy_net
@@ -134,15 +148,14 @@ impl Agent {
         self.target_net = target_net.soft_update(&self.policy_net, self.tau);
     }
 
-    pub fn go(&mut self, env: &mut GrassyField<FIELD_SIZE>) {
+    pub fn go(&mut self, env: &mut CartPole) {
         let mut next_state = Some(env.reset());
         let mut optimizer = AdamWConfig::new()
             .with_epsilon(3.58e-3)
             .init::<B, Model<B>>();
 
         while let Some(state) = next_state {
-            let actions = env.actions();
-            let action = self.act(state, &actions);
+            let action = self.act(state);
             // println!("Action: {:?}", action);
             let (next, reward) = env.step(action);
             next_state = next;
@@ -158,7 +171,5 @@ impl Agent {
         }
 
         self.episode += 1;
-        let score = env.score() as f64;
-        env.report.entry("score").and_modify(|x| *x += score);
     }
 }

@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash};
 
 use crate::{
     assert_interval, decay,
-    env::Environment,
+    env::{DiscreteActionSpace, Environment},
     exploration::{Choice, EpsilonGreedy},
     memory::Exp,
 };
@@ -30,8 +30,9 @@ pub trait QAgent {
 }
 
 /// A simple Q-learning agent that utilizes a Q-table to learn its environment
-pub struct QTableAgent<E: Environment>
+pub struct QTableAgent<E>
 where
+    E: Environment + DiscreteActionSpace,
     E::State: Copy + Eq + Hash,
     E::Action: Copy + Eq + Hash,
 {
@@ -42,8 +43,9 @@ where
     episode: u32, // current episode
 }
 
-impl<E: Environment> QTableAgent<E>
+impl<E> QTableAgent<E>
 where
+    E: Environment + DiscreteActionSpace,
     E::State: Copy + Eq + Hash,
     E::Action: Copy + Eq + Hash,
 {
@@ -72,8 +74,9 @@ where
     }
 }
 
-impl<E: Environment> QTableAgent<E>
+impl<E> QTableAgent<E>
 where
+    E: Environment + DiscreteActionSpace,
     E::State: Copy + Eq + Hash,
     E::Action: Copy + Eq + Hash,
 {

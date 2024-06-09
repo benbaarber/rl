@@ -1,4 +1,4 @@
-use crate::env::{Environment, Report};
+use crate::env::{DiscreteActionSpace, Environment, Report};
 
 #[derive(PartialEq)]
 pub enum Square {
@@ -54,10 +54,7 @@ impl FrozenLake {
     }
 }
 
-impl Environment for FrozenLake {
-    type State = usize;
-    type Action = Move;
-
+impl DiscreteActionSpace for FrozenLake {
     fn actions(&self) -> Vec<Self::Action> {
         let mut actions = Vec::with_capacity(4);
 
@@ -76,6 +73,11 @@ impl Environment for FrozenLake {
 
         actions
     }
+}
+
+impl Environment for FrozenLake {
+    type State = usize;
+    type Action = Move;
 
     fn is_active(&self) -> bool {
         match self.map[self.pos] {

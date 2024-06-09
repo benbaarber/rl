@@ -8,8 +8,7 @@ use crate::util::summary_from_keys;
 /// Represents a Markov decision process, defining the dynamics of an environment
 /// in which an agent can operate.
 ///
-/// This base trait represents the common case of a discrete-time MDP with one agent
-/// and a finite state space and action space.
+/// This base trait represents the common case of a discrete-time MDP with one agent.
 pub trait Environment {
     /// A representation of the state of the environment to be passed to an agent
     ///
@@ -27,14 +26,6 @@ pub trait Environment {
     /// - `Clone`: When sampling batches of experiences, cloning is necessary
     type Action: Clone;
 
-    // /// Relevant data to be returned after an episode summarizing the agent's performance
-    // type Report;
-
-    /// Get the available actions for the current state
-    ///
-    /// The returned slice should never be empty, instead specify an action that represents doing nothing if necessary.
-    fn actions(&self) -> Vec<Self::Action>;
-
     /// Update the environment in response to a an action taken by an agent, producing a new state and associated reward
     ///
     /// **Returns** `(next_state, reward)`
@@ -49,6 +40,14 @@ pub trait Environment {
     fn is_active(&self) -> bool {
         true
     }
+}
+
+/// An [Environment] with a discrete action space
+pub trait DiscreteActionSpace: Environment {
+    /// Get the available actions for the current state
+    ///
+    /// The returned slice should never be empty, instead specify an action that represents doing nothing if necessary.
+    fn actions(&self) -> Vec<Self::Action>;
 }
 
 /// A format for reporting training results to [viz](crate::viz)

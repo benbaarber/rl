@@ -1,8 +1,9 @@
 use agent::Agent;
 use burn::backend::{wgpu, Autodiff, Wgpu};
+use gym_rs::utils::renderer::RenderMode;
 use model::ModelConfig;
 use once_cell::sync::Lazy;
-use rl::{decay, exploration::EpsilonGreedy, gym::GrassyField, viz};
+use rl::{decay, exploration::EpsilonGreedy, gym::CartPole, viz};
 
 mod agent;
 mod model;
@@ -12,14 +13,13 @@ type DQNAutodiffBackend = Autodiff<DQNBackend>;
 
 static DEVICE: Lazy<wgpu::WgpuDevice> = Lazy::new(wgpu::WgpuDevice::default);
 
-const FIELD_SIZE: usize = 6;
 const NUM_EPISODES: u16 = 50000;
 const UPDATE_FREQ: u16 = 10;
 
 fn main() {
-    let mut env = GrassyField::<FIELD_SIZE>::new();
+    let mut env = CartPole::new(RenderMode::Human);
 
-    let model_config = ModelConfig::new(FIELD_SIZE, 32, 128, 64, 128);
+    let model_config = ModelConfig::new(32, 64);
     let exploration = EpsilonGreedy::new(decay::Exponential::new(1e-5, 0.915, 0.1).unwrap());
     let mut agent = Agent::new(model_config, exploration);
 

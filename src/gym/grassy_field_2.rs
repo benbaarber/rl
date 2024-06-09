@@ -3,7 +3,7 @@ use std::collections::{HashSet, VecDeque};
 use rand::{seq::IteratorRandom, thread_rng, Rng};
 use strum::{EnumIter, FromRepr, IntoEnumIterator, VariantArray};
 
-use crate::env::{Environment, Report};
+use crate::env::{DiscreteActionSpace, Environment, Report};
 
 /// Position coordinates in the field with 1 unit of padding as a death zone
 type Pos = (usize, usize);
@@ -132,13 +132,15 @@ impl<const S: usize> GrassyField2<S> {
     }
 }
 
-impl<const S: usize> Environment for GrassyField2<S> {
-    type State = [bool; 12];
-    type Action = Dir;
-
+impl<const S: usize> DiscreteActionSpace for GrassyField2<S> {
     fn actions(&self) -> Vec<Self::Action> {
         Dir::VARIANTS.to_vec()
     }
+}
+
+impl<const S: usize> Environment for GrassyField2<S> {
+    type State = [bool; 12];
+    type Action = Dir;
 
     fn is_active(&self) -> bool {
         self.is_in_bounds(self.snake.head())
