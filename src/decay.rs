@@ -112,3 +112,53 @@ impl Decay for Step {
         (vi * rate.powf((t / step).floor())).max(vf)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_functional() {
+        assert!(validate(1.0, 1.0, 0.0).is_ok());
+        assert!(validate(1.0, -1.0, 0.0).is_err());
+        assert!(validate(-1.0, 1.0, 0.0).is_err());
+        assert!(validate(-1.0, -1.0, 0.0).is_ok());
+    }
+
+    #[test]
+    fn constant_decay() {
+        let x = Constant::new(1.0);
+        assert_eq!(x.evaluate(0.0), 1.0);
+        assert_eq!(x.evaluate(1.0), 1.0);
+    }
+
+    #[test]
+    fn exponential_decay() {
+        let x = Exponential::new(2.0, 2.0, 0.5).unwrap();
+        assert_eq!(x.evaluate(0.0), 2.0);
+        assert_eq!(x.evaluate(1.0), 0.5 + 1.5 * f32::exp(-2.0));
+    }
+
+    #[test]
+    fn inverse_time_decay() {
+        let x = InverseTime::new(2.0, 2.0, 0.5).unwrap();
+        assert_eq!(x.evaluate(0.0), 2.0);
+        assert_eq!(x.evaluate(1.0), 1.0);
+    }
+
+    #[test]
+    fn linear_decay() {
+        let x = Linear::new(0.5, 2.0, 0.5).unwrap();
+        assert_eq!(x.evaluate(0.0), 2.0);
+        assert_eq!(x.evaluate(1.0), 1.5);
+        assert_eq!(x.evaluate(10.0), 0.5);
+    }
+
+    #[test]
+    fn step_decay() {
+        let x = Step::new(0.5, 2.0, 0.0, 0.5).unwrap();
+        assert_eq!(x.evaluate(0.25), 2.0);
+        assert_eq!(x.evaluate(0.75), 1.0);
+        assert_eq!(x.evaluate(1.0), 0.5);
+    }
+}
