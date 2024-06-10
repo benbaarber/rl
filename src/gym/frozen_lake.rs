@@ -9,7 +9,7 @@ pub enum Square {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub enum Move {
+pub enum FLAction {
     Left = 0,
     Down = 1,
     Right = 2,
@@ -59,16 +59,16 @@ impl DiscreteActionSpace for FrozenLake {
         let mut actions = Vec::with_capacity(4);
 
         if self.pos % 4 != 0 {
-            actions.push(Move::Left)
+            actions.push(FLAction::Left)
         }
         if self.pos < 12 {
-            actions.push(Move::Down)
+            actions.push(FLAction::Down)
         }
         if self.pos % 4 != 3 {
-            actions.push(Move::Right)
+            actions.push(FLAction::Right)
         }
         if self.pos > 3 {
-            actions.push(Move::Up)
+            actions.push(FLAction::Up)
         }
 
         actions
@@ -77,7 +77,7 @@ impl DiscreteActionSpace for FrozenLake {
 
 impl Environment for FrozenLake {
     type State = usize;
-    type Action = Move;
+    type Action = FLAction;
 
     fn is_active(&self) -> bool {
         match self.map[self.pos] {
@@ -90,10 +90,10 @@ impl Environment for FrozenLake {
         self.report.entry("steps").and_modify(|x| *x += 1.0);
 
         match action {
-            Move::Left => self.pos -= 1,
-            Move::Down => self.pos += 4,
-            Move::Right => self.pos += 1,
-            Move::Up => self.pos -= 4,
+            FLAction::Left => self.pos -= 1,
+            FLAction::Down => self.pos += 4,
+            FLAction::Right => self.pos += 1,
+            FLAction::Up => self.pos -= 4,
         };
 
         let (next_state, reward) = match self.map[self.pos] {

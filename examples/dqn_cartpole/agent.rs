@@ -49,7 +49,7 @@ pub struct Agent {
     gamma: f32,
     tau: f32,
     lr: f32,
-    episode: u32,
+    total_steps: u32,
 }
 
 impl Agent {
@@ -57,13 +57,13 @@ impl Agent {
         Self {
             policy_net: Some(model_config.init(&*DEVICE)),
             target_net: Some(model_config.init(&*DEVICE)),
-            memory: ReplayMemory::new(2048),
+            memory: ReplayMemory::new(50000),
             loss: MseLoss::new(),
             exploration,
             gamma: 0.99,
             tau: 1e-2,
-            lr: 1e-5,
-            episode: 0,
+            lr: 1e-3,
+            total_steps: 0,
         }
     }
 }
@@ -73,7 +73,7 @@ type Action = CPAction;
 
 impl Agent {
     fn act(&self, state: State) -> Action {
-        match self.exploration.choose(self.episode) {
+        match self.exploration.choose(self.total_steps) {
             Choice::Explore => CPAction::iter().choose(&mut thread_rng()).unwrap(),
             Choice::Exploit => {
                 let input = Tensor::<B, 2>::from_floats([state], &*DEVICE);
@@ -174,8 +174,8 @@ impl Agent {
                 info!("{:?}", loss);
                 env.report.entry("loss").and_modify(|x| *x = loss);
             }
-        }
 
-        self.episode += 1;
+            self.total_steps += 1;
+        }
     }
 }

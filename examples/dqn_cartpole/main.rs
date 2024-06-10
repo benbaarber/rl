@@ -19,7 +19,7 @@ fn main() {
     let mut env = CartPole::new(RenderMode::None);
 
     let model_config = ModelConfig::new(64, 128);
-    let exploration = EpsilonGreedy::new(decay::Exponential::new(1e-5, 0.915, 0.05).unwrap());
+    let exploration = EpsilonGreedy::new(decay::Exponential::new(1e-3, 0.915, 0.05).unwrap());
     let mut agent = Agent::new(model_config, exploration);
 
     let (handle, tx) = viz::init(env.report.keys(), NUM_EPISODES);

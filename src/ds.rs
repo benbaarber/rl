@@ -90,3 +90,26 @@ impl<T: Clone, const CAP: usize> Index<usize> for StaticRingBuffer<T, CAP> {
         &self.buffer[index]
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ringbuffer_functional() {
+        let mut buf = RingBuffer::new(4);
+        assert_eq!(buf.len(), 0, "initialized empty");
+
+        for i in 0..4 {
+            buf.push(i * 2);
+        }
+
+        assert_eq!(buf.len(), 4, "length correct");
+        assert_eq!(buf.view(), [0, 2, 4, 6], "contents correct");
+
+        buf.push(1);
+        buf.push(3);
+        assert_eq!(buf.len(), 4, "length unchanged");
+        assert_eq!(buf.view(), [1, 3, 4, 6], "contents overwritten correctly");
+    }
+}

@@ -13,7 +13,7 @@ use super::tui;
 const TABS: [&str; 2] = ["Plots", "Logs"];
 
 #[derive(Default)]
-pub enum State {
+pub enum AppMode {
     #[default]
     Train,
     Error(&'static str),
@@ -28,7 +28,7 @@ pub struct Update {
 
 /// The root TUI component which holds the main app state and runs the render loop
 pub struct App {
-    state: State,
+    state: AppMode,
     episode: u16,
     total_episodes: u16,
     selected_tab: usize,
@@ -54,7 +54,7 @@ impl App {
 
         loop {
             match self.state {
-                State::Train => {
+                AppMode::Train => {
                     loop {
                         match rx.try_recv() {
                             Ok(update) => {
@@ -63,7 +63,7 @@ impl App {
                             }
                             Err(TryRecvError::Empty) => break,
                             Err(TryRecvError::Disconnected) => {
-                                self.state = State::Error("Channel disconnected.");
+                                self.state = AppMode::Error("Channel disconnected.");
                                 break;
                             }
                         };
@@ -81,7 +81,7 @@ impl App {
                                     self.selected_tab = (self.selected_tab + 1) % TABS.len();
                                 }
                                 KeyCode::Char('q') => {
-                                    self.state = State::Quit;
+                                    self.state = AppMode::Quit;
                                 }
                                 KeyCode::Left => {
                                     self.plots.prev_plot();
@@ -94,8 +94,8 @@ impl App {
                         }
                     }
                 }
-                State::Error(_) => todo!(),
-                State::Quit => break,
+                AppMode::Error(_) => todo!(),
+                AppMode::Quit => break,
             }
         }
 

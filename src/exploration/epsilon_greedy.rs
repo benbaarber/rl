@@ -1,3 +1,4 @@
+use log::warn;
 use rand::{thread_rng, Rng};
 
 use crate::decay::Decay;
@@ -18,6 +19,7 @@ impl<D: Decay> EpsilonGreedy<D> {
     /// Invoke epsilon greedy policy for current episode
     pub fn choose(&self, episode: u32) -> Choice {
         let epsilon = self.epsilon.evaluate(episode as f32);
+        warn!("EPSILON: {:?}", epsilon);
         if thread_rng().gen::<f32>() > epsilon {
             Choice::Exploit
         } else {
