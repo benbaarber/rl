@@ -1,8 +1,4 @@
-use burn::{
-    module::Param,
-    prelude::*,
-    tensor::activation::{relu, softmax},
-};
+use burn::{module::Param, prelude::*, tensor::activation::relu};
 use nn::{Linear, LinearConfig};
 
 #[derive(Module, Debug)]
@@ -32,7 +28,7 @@ impl<B: Backend> Model<B> {
     pub fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
         let x = relu(self.fc1.forward(input));
         let x = relu(self.fc2.forward(x));
-        let x = softmax(self.fc3.forward(x), 0);
+        let x = self.fc3.forward(x);
 
         x
     }

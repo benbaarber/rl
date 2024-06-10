@@ -42,7 +42,7 @@ impl<T> RingBuffer<T> {
         } else {
             self.buffer[self.i] = item;
         }
-        self.i = (self.i + 1) % self.len();
+        self.i = (self.i + 1) % self.capacity;
     }
 
     /// Get a slice view of the internal buffer

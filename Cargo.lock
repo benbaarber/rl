@@ -1405,8 +1405,7 @@ dependencies = [
 [[package]]
 name = "gym-rs"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f10680a831534b176ef231a56eae541036fc34bdbdadee0b4c9c6a93a511bb80"
+source = "git+https://github.com/MathisWellmann/gym-rs.git#7691f9975b97bbd61bfcae47b0ed048fc4bc76ef"
 dependencies = [
  "derivative",
  "derive-new 0.5.9",

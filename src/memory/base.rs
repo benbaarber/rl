@@ -1,3 +1,4 @@
+use log::warn;
 use rand::{seq::SliceRandom, thread_rng};
 
 use crate::{ds::RingBuffer, env::Environment};
@@ -92,6 +93,7 @@ impl<E: Environment> ReplayMemory<E> {
             let batch = ExpBatch::from_iter(experiences);
             Some(batch)
         } else {
+            warn!("Memory length: {}", self.memory.len());
             None
         }
     }

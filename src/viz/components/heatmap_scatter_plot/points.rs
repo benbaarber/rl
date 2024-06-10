@@ -34,7 +34,10 @@ impl<'a> Shape for Points<'a> {
             return;
         }
 
-        let mean_density = density_map.values().sum::<usize>() as f64 / density_map.len() as f64;
+        let mean_density = f64::max(
+            density_map.values().sum::<usize>() as f64 / density_map.len() as f64,
+            5.0,
+        );
 
         let color_map = density_map
             .into_iter()

@@ -29,7 +29,7 @@ impl CartPole {
     pub fn new(render_mode: RenderMode) -> Self {
         Self {
             gym_env: CartPoleEnv::new(render_mode),
-            report: Report::new(vec!["reward"]),
+            report: Report::new(vec!["reward", "loss"]),
         }
     }
 }

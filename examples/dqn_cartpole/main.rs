@@ -13,27 +13,23 @@ type DQNAutodiffBackend = Autodiff<DQNBackend>;
 
 static DEVICE: Lazy<wgpu::WgpuDevice> = Lazy::new(wgpu::WgpuDevice::default);
 
-const NUM_EPISODES: u16 = 50000;
-const UPDATE_FREQ: u16 = 10;
+const NUM_EPISODES: u16 = 1000;
 
 fn main() {
     let mut env = CartPole::new(RenderMode::None);
 
-    let model_config = ModelConfig::new(32, 64);
-    let exploration = EpsilonGreedy::new(decay::Exponential::new(1e-5, 0.915, 0.1).unwrap());
+    let model_config = ModelConfig::new(64, 128);
+    let exploration = EpsilonGreedy::new(decay::Exponential::new(1e-5, 0.915, 0.05).unwrap());
     let mut agent = Agent::new(model_config, exploration);
 
     let (handle, tx) = viz::init(env.report.keys(), NUM_EPISODES);
 
-    for i in 0..(NUM_EPISODES / UPDATE_FREQ) {
-        for _ in 0..UPDATE_FREQ {
-            agent.go(&mut env);
-        }
+    for i in 0..NUM_EPISODES {
+        agent.go(&mut env);
         let report = env.report.take();
-        let ep = i * UPDATE_FREQ;
         tx.send(viz::Update {
-            episode: ep,
-            data: report.values().map(|x| *x / UPDATE_FREQ as f64).collect(),
+            episode: i,
+            data: report.values().cloned().collect(),
         })
         .unwrap();
     }
