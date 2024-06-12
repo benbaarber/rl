@@ -1,11 +1,15 @@
-use super::heatmap_scatter_plot::{Axis, Dataset, HeatmapScatterPlot, Hsl};
+use super::{
+    heatmap_scatter_plot::{Axis, Dataset, HeatmapScatterPlot, Hsl},
+    Component,
+};
+use crossterm::event::{Event, KeyCode};
 use ratatui::{
     prelude::*,
     style::Stylize,
-    widgets::{Block, BorderType, Padding, Tabs},
+    widgets::{Block, BorderType, Padding, Tabs, WidgetRef},
 };
 
-use crate::viz::Update;
+use crate::viz::{util::event_keycode, Update};
 
 pub struct Plot {
     pub x_title: String,
@@ -75,8 +79,8 @@ impl Plot {
     }
 }
 
-impl Widget for &Plot {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl WidgetRef for Plot {
+    fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         let dataset = Dataset::default()
             .marker(Marker::Braille)
             .gradient((Hsl(173.0, 96.0, 50.0), Hsl(352.0, 94.0, 50.0)))
@@ -160,8 +164,8 @@ impl Plots {
     }
 }
 
-impl Widget for &Plots {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl WidgetRef for Plots {
+    fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         Tabs::new(self.plot_names.iter().copied())
             .block(Block::default().padding(Padding::uniform(2)))
             .white()
@@ -172,5 +176,21 @@ impl Widget for &Plots {
         if self.plots.len() > 0 {
             self.plots[self.selected].render(area, buf);
         }
+    }
+}
+
+impl Component for Plots {
+    fn handle_ui_event(&mut self, event: &Event) -> bool {
+        let Some(key) = event_keycode(event) else {
+            return false;
+        };
+
+        match key {
+            KeyCode::Left => self.prev_plot(),
+            KeyCode::Right => self.next_plot(),
+            _ => return false,
+        }
+
+        true
     }
 }

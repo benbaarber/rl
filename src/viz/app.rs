@@ -4,8 +4,15 @@ use std::{
     time::Duration,
 };
 
-use super::components::{Logs, Plots};
-use crossterm::event::{self, Event::Key, KeyCode, KeyEventKind};
+use super::{
+    components::{Component, Logs, Plots},
+    util::event_keycode,
+};
+use crossterm::event::{
+    self,
+    Event::{self},
+    KeyCode,
+};
 use ratatui::{prelude::*, widgets::*};
 
 use super::tui;
@@ -33,6 +40,7 @@ pub struct App {
     total_episodes: u16,
     selected_tab: usize,
     plots: Plots,
+    logs: Logs,
 }
 
 impl App {
@@ -43,6 +51,32 @@ impl App {
             total_episodes: episodes,
             selected_tab: 0,
             plots: Plots::new(plots.to_vec(), episodes),
+            logs: Logs::new(),
+        }
+    }
+
+    fn handle_ui_event(&mut self, event: &Event) {
+        let handled = match self.selected_tab {
+            1 => self.logs.handle_ui_event(event),
+            _ => self.plots.handle_ui_event(event),
+        };
+
+        if handled {
+            return;
+        }
+
+        let Some(key) = event_keycode(&event) else {
+            return;
+        };
+
+        match key {
+            KeyCode::Tab => {
+                self.selected_tab = (self.selected_tab + 1) % TABS.len();
+            }
+            KeyCode::Char('q') => {
+                self.state = AppMode::Quit;
+            }
+            _ => (),
         }
     }
 
@@ -72,26 +106,8 @@ impl App {
                     terminal.draw(|frame| frame.render_widget(&*self, frame.size()))?;
 
                     if event::poll(Duration::from_millis(16))? {
-                        if let Key(key) = event::read()? {
-                            if key.kind != KeyEventKind::Press {
-                                continue;
-                            }
-                            match key.code {
-                                KeyCode::Tab => {
-                                    self.selected_tab = (self.selected_tab + 1) % TABS.len();
-                                }
-                                KeyCode::Char('q') => {
-                                    self.state = AppMode::Quit;
-                                }
-                                KeyCode::Left => {
-                                    self.plots.prev_plot();
-                                }
-                                KeyCode::Right => {
-                                    self.plots.next_plot();
-                                }
-                                _ => {}
-                            }
-                        }
+                        let event = event::read()?;
+                        self.handle_ui_event(&event);
                     }
                 }
                 AppMode::Error(_) => todo!(),
@@ -103,8 +119,8 @@ impl App {
     }
 }
 
-impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl WidgetRef for App {
+    fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         // Layout
         let [menu_area, main_area, progress_area] = Layout::vertical([
             Constraint::Length(3),
@@ -124,9 +140,8 @@ impl Widget for &App {
 
         // Main
         match self.selected_tab {
-            0 => self.plots.render(main_area, buf),
-            1 => Logs.render(main_area, buf),
-            _ => {}
+            1 => self.logs.render(main_area, buf),
+            _ => self.plots.render(main_area, buf),
         }
 
         // Progress Bar

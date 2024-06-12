@@ -12,6 +12,8 @@ pub mod app;
 mod components;
 /// Boilerplate
 mod tui;
+/// TUI utils
+mod util;
 
 pub use app::Update;
 
