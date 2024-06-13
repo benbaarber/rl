@@ -13,7 +13,7 @@ pub struct Logs {
 impl Logs {
     pub fn new() -> Self {
         Self {
-            state: TuiWidgetState::new().set_default_display_level(log::LevelFilter::Info),
+            state: TuiWidgetState::new().set_default_display_level(log::LevelFilter::Trace),
         }
     }
 }
@@ -24,7 +24,7 @@ impl WidgetRef for Logs {
             .style(Style::default().white())
             .style_error(Style::default().light_red())
             .style_warn(Style::default().light_yellow())
-            .style_info(Style::default().light_cyan())
+            .style_info(Style::default().cyan())
             .output_separator(' ')
             .state(&self.state)
             .render(area, buf);
@@ -46,8 +46,8 @@ impl Component for Logs {
             KeyCode::Down => TuiWidgetEvent::DownKey,
             KeyCode::Left => TuiWidgetEvent::LeftKey,
             KeyCode::Right => TuiWidgetEvent::RightKey,
-            KeyCode::Char('+') => TuiWidgetEvent::PlusKey,
-            KeyCode::Char('-') => TuiWidgetEvent::MinusKey,
+            KeyCode::Char('=') | KeyCode::Char('+') => TuiWidgetEvent::PlusKey,
+            KeyCode::Char('-') | KeyCode::Char('_') => TuiWidgetEvent::MinusKey,
             KeyCode::Char('h') => TuiWidgetEvent::HideKey,
             KeyCode::Char('f') => TuiWidgetEvent::FocusKey,
             _ => return false,

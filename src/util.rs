@@ -18,7 +18,7 @@ macro_rules! assert_interval {
 }
 
 /// Format a float with the given precision. Will use scientific notation if necessary.
-pub fn _format_float(float: f64, precision: usize) -> String {
+pub(crate) fn _format_float(float: f64, precision: usize) -> String {
     let scientific_notation_threshold = 0.1_f64.powf(precision as f64 - 1.0);
 
     match scientific_notation_threshold >= float {
@@ -27,6 +27,6 @@ pub fn _format_float(float: f64, precision: usize) -> String {
     }
 }
 
-pub fn summary_from_keys(keys: &[&'static str]) -> BTreeMap<&'static str, f64> {
+pub(crate) fn summary_from_keys(keys: &[&'static str]) -> BTreeMap<&'static str, f64> {
     keys.into_iter().map(|k| (*k, 0.0)).collect()
 }

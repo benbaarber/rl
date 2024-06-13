@@ -56,6 +56,7 @@ pub trait DiscreteActionSpace: Environment {
 /// Meant to be initialized once and used for the lifetime of an [Environment].
 ///
 /// See examples for implementation
+#[derive(Debug)]
 pub struct Report {
     keys: Vec<&'static str>,
     map: BTreeMap<&'static str, f64>,

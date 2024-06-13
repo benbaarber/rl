@@ -14,12 +14,13 @@ fn obs2arr(observation: CartPoleObservation) -> [f32; 4] {
         .expect("vec is length 4")
 }
 
-#[derive(FromRepr, EnumIter, Clone, Copy)]
+#[derive(FromRepr, EnumIter, Clone, Copy, Debug)]
 pub enum CPAction {
     Left = 0,
     Right = 1,
 }
 
+#[derive(Debug)]
 pub struct CartPole {
     gym_env: CartPoleEnv,
     pub report: Report,

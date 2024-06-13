@@ -13,7 +13,7 @@ type DQNAutodiffBackend = Autodiff<DQNBackend>;
 
 static DEVICE: Lazy<wgpu::WgpuDevice> = Lazy::new(wgpu::WgpuDevice::default);
 
-const NUM_EPISODES: u16 = 1000;
+const NUM_EPISODES: u16 = 128;
 
 fn main() {
     let mut env = CartPole::new(RenderMode::None);

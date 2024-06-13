@@ -23,7 +23,6 @@ use burn::{
     optim::{AdamWConfig, GradientsParams, Optimizer},
     prelude::*,
 };
-use log::info;
 use nn::loss::{MseLoss, Reduction};
 use rand::{seq::IteratorRandom, thread_rng};
 use rl::{
@@ -60,8 +59,8 @@ impl Agent {
             memory: ReplayMemory::new(50000),
             loss: MseLoss::new(),
             exploration,
-            gamma: 0.99,
-            tau: 1e-2,
+            gamma: 0.999,
+            tau: 5e-3,
             lr: 1e-3,
             total_steps: 0,
         }
@@ -90,7 +89,7 @@ impl Agent {
     }
 
     fn learn(&mut self, optimizer: &mut impl Optimizer<Model<B>, B>) -> Option<f64> {
-        const BATCH_SIZE: usize = 128;
+        const BATCH_SIZE: usize = 16;
         let batch = self.memory.sample_zipped::<BATCH_SIZE>()?;
 
         let mut non_terminal_mask = [false; BATCH_SIZE];
@@ -99,7 +98,9 @@ impl Agent {
                 non_terminal_mask[i] = true;
             }
         }
-        let non_terminal_mask = Tensor::<B, 1, Bool>::from_bool(non_terminal_mask.into(), &*DEVICE);
+
+        let non_terminal_mask =
+            Tensor::<B, 1, Bool>::from_bool(non_terminal_mask.into(), &*DEVICE).unsqueeze_dim(1);
 
         let next_states = Tensor::<B, 2>::cat(
             batch
@@ -112,37 +113,37 @@ impl Agent {
         );
 
         let states = Tensor::<B, 2>::from_floats(batch.states, &*DEVICE);
-        let actions = Tensor::<B, 1, Int>::from_ints(
+
+        let actions = Tensor::<B, 2, Int>::from_ints(
             Data::new(
                 batch
                     .actions
                     .into_iter()
                     .map(|a| a as i32)
                     .collect::<Vec<_>>(),
-                [BATCH_SIZE].into(),
+                [BATCH_SIZE, 1].into(),
             ),
             &*DEVICE,
         );
-        let rewards = Tensor::<B, 1>::from_floats(batch.rewards, &*DEVICE);
+
+        let rewards = Tensor::<B, 1>::from_floats(batch.rewards, &*DEVICE).unsqueeze_dim(1);
 
         let policy_net = self.policy_net.take().unwrap();
         let target_net = self.target_net.take().unwrap();
 
-        let q_values = policy_net
-            .forward(states)
-            .gather(1, actions.unsqueeze_dim(1))
-            .squeeze(1);
-        let max_next_q_values = Tensor::<B, 1>::zeros([BATCH_SIZE], &*DEVICE).mask_where(
+        let q_values = policy_net.forward(states).gather(1, actions);
+
+        let expected_q_values = Tensor::<B, 2>::zeros([BATCH_SIZE, 1], &*DEVICE).mask_where(
             non_terminal_mask,
-            target_net.forward(next_states).max_dim(1).squeeze(1),
+            target_net.forward(next_states).max_dim(1).detach(),
         );
 
-        let discounted_expected_return = rewards + (max_next_q_values * self.gamma);
+        let discounted_expected_return = rewards + (expected_q_values * self.gamma);
 
         let loss = self
             .loss
             .forward(q_values, discounted_expected_return, Reduction::Mean);
-        let grads = GradientsParams::from_grads(loss.backward(), &self.policy_net);
+        let grads = GradientsParams::from_grads(loss.backward(), &policy_net);
 
         self.policy_net = Some(optimizer.step(self.lr.into(), policy_net, grads));
         self.target_net = Some(target_net.soft_update(self.policy_net.as_ref().unwrap(), self.tau));
@@ -171,7 +172,7 @@ impl Agent {
             let loss = self.learn(&mut optimizer);
 
             if let Some(loss) = loss {
-                info!("{:?}", loss);
+                // debug!(target: "tui", "{:?}", loss);
                 env.report.entry("loss").and_modify(|x| *x = loss);
             }
 

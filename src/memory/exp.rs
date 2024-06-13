@@ -26,7 +26,7 @@ impl<E: Environment> Clone for Exp<E> {
 /// A zipped batch of [experiences](Exp) where the batch size is known at compile time
 ///
 /// The batch size must be passed to the const generic `S`
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ExpBatch<E: Environment, const S: usize> {
     /// The state of the environment before taking the action
     pub states: [E::State; S],
@@ -53,7 +53,7 @@ impl<E: Environment, const S: usize> ExpBatch<E, S> {
 }
 
 /// A zipped batch of [experiences](Exp) where the batch size is not known at compile time
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DynamicExpBatch<E: Environment> {
     /// The state of the environment before taking the action
     pub states: Vec<E::State>,

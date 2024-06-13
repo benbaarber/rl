@@ -42,6 +42,7 @@ impl Plot {
     }
 
     /// Provide initial y bounds
+    #[allow(unused)]
     pub fn with_y_bounds(mut self, y_bounds: [f64; 2]) -> Self {
         self.y_bounds = y_bounds;
         self.y_labels = self.y_bounds.iter().map(|x| format!("{x:.2}")).collect();
