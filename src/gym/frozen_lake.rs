@@ -86,6 +86,10 @@ impl Environment for FrozenLake {
         }
     }
 
+    fn random_action() -> Self::Action {
+        FLAction::Down // TODO: random actions when available actions are state dependent require instance as parameter
+    }
+
     fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32) {
         self.report.entry("steps").and_modify(|x| *x += 1.0);
 

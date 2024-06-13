@@ -36,6 +36,9 @@ pub trait Environment {
     /// **Returns** the state
     fn reset(&mut self) -> Self::State;
 
+    /// Select a random action from the action space
+    fn random_action() -> Self::Action;
+
     /// Determine if the environment is in an active or terminal state
     fn is_active(&self) -> bool {
         true

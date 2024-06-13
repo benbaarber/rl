@@ -1,3 +1,2 @@
-pub mod q;
-
-pub use q::{QAgent, QTableAgent};
+pub mod dqn;
+pub mod q_table;

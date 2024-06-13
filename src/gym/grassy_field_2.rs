@@ -148,6 +148,10 @@ impl<const S: usize> Environment for GrassyField2<S> {
             && self.snake.len() < S * S
     }
 
+    fn random_action() -> Self::Action {
+        Dir::iter().choose(&mut thread_rng()).unwrap()
+    }
+
     fn reset(&mut self) -> Self::State {
         self.snake = Snake::new(S);
         self.spawn_food();

@@ -1,4 +1,4 @@
-use rl::{algo::QTableAgent, decay, exploration::EpsilonGreedy, gym::FrozenLake, viz};
+use rl::{algo::q_table::QTableAgent, decay, exploration::EpsilonGreedy, gym::FrozenLake, viz};
 
 const NUM_EPISODES: u16 = 10000;
 

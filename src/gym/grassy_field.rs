@@ -161,6 +161,10 @@ impl<const S: usize> Environment for GrassyField<S> {
         self.is_in_bounds(self.snake.head()) && !self.snake.is_intersecting()
     }
 
+    fn random_action() -> Self::Action {
+        Dir::iter().choose(&mut thread_rng()).unwrap()
+    }
+
     fn reset(&mut self) -> Self::State {
         self.snake = Snake::new(S);
         self.spawn_food();

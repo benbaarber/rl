@@ -1,4 +1,4 @@
-use rl::{algo::QTableAgent, decay, exploration::EpsilonGreedy, gym::GrassyField2, viz};
+use rl::{algo::q_table::QTableAgent, decay, exploration::EpsilonGreedy, gym::GrassyField2, viz};
 
 const FIELD_SIZE: usize = 20;
 const NUM_EPISODES: u16 = 10000;

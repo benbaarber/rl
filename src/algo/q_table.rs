@@ -8,27 +8,6 @@ use crate::{
     memory::Exp,
 };
 
-pub trait QAgent {
-    type Env: Environment;
-
-    /// Perform an action given the current state and available actions
-    fn act(
-        &self,
-        state: <Self::Env as Environment>::State,
-        actions: &[<Self::Env as Environment>::Action],
-    ) -> <Self::Env as Environment>::Action;
-
-    /// Update the agent's policy after an [Experience](Exp)
-    fn learn(
-        &mut self,
-        experience: Exp<Self::Env>,
-        next_actions: &[<Self::Env as Environment>::Action],
-    );
-
-    /// Deploy agent into the environment for one episode
-    fn go(&mut self);
-}
-
 /// A simple Q-learning agent that utilizes a Q-table to learn its environment
 pub struct QTableAgent<E>
 where

@@ -1,7 +1,9 @@
 use gym_rs::core::{ActionReward, Env};
 use gym_rs::envs::classical_control::cartpole::{CartPoleEnv, CartPoleObservation};
 use gym_rs::utils::renderer::RenderMode;
-use strum::{EnumIter, FromRepr};
+use rand::seq::IteratorRandom;
+use rand::thread_rng;
+use strum::{EnumIter, FromRepr, IntoEnumIterator};
 
 use crate::env::{Environment, Report};
 
@@ -38,6 +40,10 @@ impl CartPole {
 impl Environment for CartPole {
     type State = [f32; 4];
     type Action = CPAction;
+
+    fn random_action() -> Self::Action {
+        CPAction::iter().choose(&mut thread_rng()).unwrap()
+    }
 
     fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32) {
         let ActionReward {

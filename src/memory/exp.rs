@@ -102,6 +102,10 @@ mod tests {
         fn reset(&mut self) -> Self::State {
             0
         }
+
+        fn random_action() -> Self::Action {
+            0
+        }
     }
 
     const BATCH_SIZE: usize = 2;
