@@ -4,6 +4,7 @@ use crate::{ds::RingBuffer, env::Environment};
 
 use super::{DynamicExpBatch, Exp, ExpBatch};
 
+// TODO: Split replay memory into two structs: ReplayMemory and DynamicReplayMemory, where the former has a const generic batch size
 /// A fixed-size memory storage for reinforcement learning experiences
 ///
 /// This structure uses a ring buffer to store experiences, which are tuples of (state, action, next state, reward).
@@ -14,11 +15,11 @@ use super::{DynamicExpBatch, Exp, ExpBatch};
 ///
 /// ### Fields:
 /// - `memory`: A `RingBuffer` that stores the experiences
-pub struct ReplayMemory<E: Environment> {
+pub struct ReplayMemory<const B: usize, E: Environment> {
     memory: RingBuffer<Exp<E>>,
 }
 
-impl<E: Environment> ReplayMemory<E> {
+impl<const B: usize, E: Environment> ReplayMemory<B, E> {
     pub fn new(capacity: usize) -> Self {
         Self {
             memory: RingBuffer::<Exp<E>>::new(capacity),
@@ -42,12 +43,12 @@ impl<E: Environment> ReplayMemory<E> {
     /// ### Returns
     /// - `Some(experiences)` if `S` is less than or equal to the buffer length
     /// - `None` otherwise
-    pub fn sample<const S: usize>(&self) -> Option<[Exp<E>; S]> {
-        if S <= self.memory.len() {
+    pub fn sample(&self) -> Option<[Exp<E>; B]> {
+        if B <= self.memory.len() {
             Some(
                 self.memory
                     .view()
-                    .choose_multiple(&mut thread_rng(), S)
+                    .choose_multiple(&mut thread_rng(), B)
                     .cloned()
                     .collect::<Vec<_>>()
                     .try_into()
@@ -82,12 +83,12 @@ impl<E: Environment> ReplayMemory<E> {
     /// ### Returns
     /// - `Some(batch)` if `S` is less than or equal to the buffer length
     /// - `None` otherwise
-    pub fn sample_zipped<const S: usize>(&self) -> Option<ExpBatch<E, S>> {
-        if S <= self.memory.len() {
+    pub fn sample_zipped(&self) -> Option<ExpBatch<E, B>> {
+        if B <= self.memory.len() {
             let experiences = self
                 .memory
                 .view()
-                .choose_multiple(&mut thread_rng(), S)
+                .choose_multiple(&mut thread_rng(), B)
                 .cloned();
             let batch = ExpBatch::from_iter(experiences);
             Some(batch)
@@ -157,10 +158,10 @@ mod tests {
     #[test]
     fn replay_memory_functional() {
         let experiences = create_mock_exp_vec();
-        let mut memory = ReplayMemory::new(MEMORY_CAP);
+        let mut memory = ReplayMemory::<BATCH_SIZE, _>::new(MEMORY_CAP);
 
         assert!(
-            memory.sample::<BATCH_SIZE>().is_none(),
+            memory.sample().is_none(),
             "sample none when too few experiences"
         );
         assert!(
@@ -168,7 +169,7 @@ mod tests {
             "sample_dyn none when too few experiences"
         );
         assert!(
-            memory.sample_zipped::<BATCH_SIZE>().is_none(),
+            memory.sample_zipped().is_none(),
             "sample_zipped none when too few experiences"
         );
         assert!(
@@ -181,7 +182,7 @@ mod tests {
         }
 
         assert!(
-            memory.sample::<BATCH_SIZE>().is_some_and(|b| b.len() == 2),
+            memory.sample().is_some_and(|b| b.len() == 2),
             "sample works"
         );
         assert!(
@@ -189,9 +190,7 @@ mod tests {
             "sample_dyn works"
         );
         assert!(
-            memory
-                .sample_zipped::<BATCH_SIZE>()
-                .is_some_and(|b| b.states.len() == 2),
+            memory.sample_zipped().is_some_and(|b| b.states.len() == 2),
             "sample_zipped works"
         );
         assert!(

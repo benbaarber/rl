@@ -1,5 +1,6 @@
 use std::{
     collections::BTreeMap,
+    fmt::Debug,
     ops::{Deref, DerefMut},
 };
 
@@ -16,7 +17,7 @@ pub trait Environment {
     ///
     /// ### Trait bounds
     /// - `Clone`: When sampling batches of experiences, cloning is necessary
-    type State: Clone;
+    type State: Clone + Debug;
 
     /// A representation of an action that an agent can take to affect the environment
     ///
@@ -24,7 +25,7 @@ pub trait Environment {
     ///
     /// ### Trait bounds
     /// - `Clone`: When sampling batches of experiences, cloning is necessary
-    type Action: Clone;
+    type Action: Clone + Debug;
 
     /// Update the environment in response to a an action taken by an agent, producing a new state and associated reward
     ///

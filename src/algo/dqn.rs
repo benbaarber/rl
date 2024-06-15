@@ -1,8 +1,8 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, marker::PhantomData};
 
 use burn::{
     module::AutodiffModule,
-    optim::{GradientsParams, Optimizer},
+    optim::{adaptor::OptimizerAdaptor, AdamW, AdamWConfig, GradientsParams, Optimizer},
     prelude::*,
     tensor::backend::AutodiffBackend,
 };
@@ -34,23 +34,65 @@ pub trait DQNModel<B: AutodiffBackend, const D: usize>: AutodiffModule<B> {
     fn soft_update(self, other: &Self, tau: f32) -> Self;
 }
 
+pub trait DQNState {}
+
+pub struct DQNAgentConfig<B, M, E, O, const D: usize, const BS: usize>
+where
+    B: AutodiffBackend,
+    E: Environment,
+{
+    pub memory: ReplayMemory<BS, E>,
+    pub optimizer: O,
+    pub loss: MseLoss<B>,
+    pub exploration: EpsilonGreedy<decay::Exponential>,
+    pub gamma: f32,
+    pub tau: f32,
+    pub lr: f32,
+    pub phantom: PhantomData<M>,
+}
+
+type AdamWOptimizer<M, B> = OptimizerAdaptor<AdamW<<B as AutodiffBackend>::InnerBackend>, M, B>;
+
+impl<B, M, E, const D: usize, const BS: usize> Default
+    for DQNAgentConfig<B, M, E, AdamWOptimizer<M, B>, D, BS>
+where
+    B: AutodiffBackend,
+    M: DQNModel<B, D>,
+    E: Environment,
+{
+    fn default() -> Self {
+        Self {
+            memory: ReplayMemory::new(50000),
+            optimizer: AdamWConfig::new().init::<B, M>(),
+            loss: MseLoss::new(),
+            exploration: EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.05).unwrap()),
+            gamma: 0.999,
+            tau: 5e-3,
+            lr: 1e-3,
+            phantom: PhantomData,
+        }
+    }
+}
+
 /// A Deep Q Network agent
 ///
 /// ### Generics
 /// - `B`: A burn backend
 /// - `M`: The [`DQNModel`] used for the policy and target networks
 /// - `E`: The [`Environment`] in which the agent will learn
-pub struct DQNAgent<B, M, E, O, const D: usize>
+///     - The environment's action space must be discrete, since the policy network produces a Q value for each action.
+///     - The state and action types' implementations of [`Clone`] should be very lightweight, as they are cloned often.
+///       Ideally, both types are [`Copy`].
+/// - `O`: An [`Optimizer`]
+pub struct DQNAgent<B, M, E, O, const D: usize, const BS: usize>
 where
     B: AutodiffBackend,
-    M: DQNModel<B, D>,
     E: Environment,
-    O: Optimizer<M, B>,
 {
     policy_net: Option<M>,
     target_net: Option<M>,
     device: &'static B::Device,
-    memory: ReplayMemory<E>,
+    memory: ReplayMemory<BS, E>,
     optimizer: O,
     loss: MseLoss<B>,
     exploration: EpsilonGreedy<decay::Exponential>,
@@ -60,24 +102,41 @@ where
     total_steps: u32,
 }
 
-impl<B, M, E, O, const D: usize> DQNAgent<B, M, E, O, D>
+impl<B, M, E, O, const D: usize, const BS: usize> DQNAgent<B, M, E, O, D, BS>
 where
     B: AutodiffBackend,
     M: DQNModel<B, D>,
     E: Environment,
     O: Optimizer<M, B>,
-    for<'a> &'a E::State: Into<Data<B::FloatElem, D>> + Debug,
-    for<'a> &'a [E::State]: Into<Data<B::FloatElem, D>> + Debug,
-    for<'a> &'a E::Action: Into<Data<B::FloatElem, 2>> + Debug,
-    for<'a> &'a [E::Action]: Into<Data<B::IntElem, 2>> + Debug,
+    E::State: Into<Data<B::FloatElem, D>>,
+    [E::State; BS]: Into<Data<B::FloatElem, D>>,
+    E::Action: Into<Data<B::FloatElem, 2>>,
+    [E::Action; BS]: Into<Data<B::IntElem, 2>>,
     E::Action: From<usize>,
     B::IntElem: TryInto<usize, Error: Debug>,
 {
-    pub fn new() -> Self {
-        todo!()
+    pub fn new(
+        model: M,
+        device: &'static B::Device,
+        config: DQNAgentConfig<B, M, E, O, D, BS>,
+    ) -> Self {
+        let model_clone = model.clone();
+        Self {
+            policy_net: Some(model),
+            target_net: Some(model_clone),
+            device,
+            memory: config.memory,
+            optimizer: config.optimizer,
+            loss: config.loss,
+            exploration: config.exploration,
+            gamma: config.gamma,
+            tau: config.tau,
+            lr: config.lr,
+            total_steps: 0,
+        }
     }
 
-    fn act(&self, state: &E::State) -> E::Action {
+    fn act(&self, state: E::State) -> E::Action {
         match self.exploration.choose(self.total_steps) {
             Choice::Explore => E::random_action(),
             Choice::Exploit => {
@@ -94,10 +153,12 @@ where
         }
     }
 
-    fn learn<const BATCH_SIZE: usize>(&mut self) -> Option<()> {
-        let batch = self.memory.sample_zipped::<BATCH_SIZE>()?;
+    fn learn(&mut self) {
+        let Some(batch) = self.memory.sample_zipped() else {
+            return;
+        };
 
-        let mut non_terminal_mask = [false; BATCH_SIZE];
+        let mut non_terminal_mask = [false; BS];
         for (i, s) in batch.next_states.iter().enumerate() {
             if s.is_some() {
                 non_terminal_mask[i] = true;
@@ -112,13 +173,13 @@ where
                 .next_states
                 .into_iter()
                 .flatten()
-                .map(|ns| Tensor::from_data(&ns, self.device))
+                .map(|ns| Tensor::from_data(ns, self.device))
                 .collect::<Vec<_>>(),
             0,
         );
 
-        let states = Tensor::from_data(batch.states.as_slice(), self.device);
-        let actions = Tensor::from_data(batch.actions.as_slice(), self.device);
+        let states = Tensor::from_data(batch.states, self.device);
+        let actions = Tensor::from_data(batch.actions, self.device);
         let rewards = Tensor::<B, 1>::from_floats(batch.rewards, self.device).unsqueeze_dim(1);
 
         let policy_net = self.policy_net.take().unwrap();
@@ -126,7 +187,7 @@ where
 
         let q_values = policy_net.forward(states).gather(1, actions);
 
-        let expected_q_values = Tensor::<B, 2>::zeros([BATCH_SIZE, 1], self.device).mask_where(
+        let expected_q_values = Tensor::<B, 2>::zeros([BS, 1], self.device).mask_where(
             non_terminal_mask,
             target_net.forward(next_states).max_dim(1).detach(),
         );
@@ -140,28 +201,24 @@ where
 
         self.policy_net = Some(self.optimizer.step(self.lr.into(), policy_net, grads));
         self.target_net = Some(target_net.soft_update(self.policy_net.as_ref().unwrap(), self.tau));
-
-        Some(())
     }
 
     pub fn go(&mut self, env: &mut E) {
         let mut next_state = Some(env.reset());
 
         while let Some(state) = next_state {
-            let action = self.act(&state);
-            let (next, reward) = env.step(action.clone()); // TODO: probably a better way than cloning
+            let action = self.act(state.clone());
+            let (next, reward) = env.step(action.clone());
             next_state = next;
 
             self.memory.push(Exp {
                 state,
                 action,
-                next_state: next_state.clone(), // TODO: probably a better way than cloning
+                next_state: next_state.clone(),
                 reward,
             });
 
-            // TODO: Figure out how to pass batch size down cleanly
-            let _ = self.learn::<128>();
-
+            self.learn();
             self.total_steps += 1;
         }
     }
