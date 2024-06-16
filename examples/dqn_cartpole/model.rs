@@ -1,5 +1,10 @@
-use burn::{module::Param, prelude::*, tensor::activation::relu};
+use burn::{
+    module::Param,
+    prelude::*,
+    tensor::{activation::relu, backend::AutodiffBackend},
+};
 use nn::{Linear, LinearConfig};
+use rl::algo::dqn::DQNModel;
 
 #[derive(Module, Debug)]
 pub struct Model<B: Backend> {
@@ -24,8 +29,8 @@ impl ModelConfig {
     }
 }
 
-impl<B: Backend> Model<B> {
-    pub fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
+impl<B: AutodiffBackend> DQNModel<B, 2> for Model<B> {
+    fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
         let x = relu(self.fc1.forward(input));
         let x = relu(self.fc2.forward(x));
         let x = self.fc3.forward(x);
@@ -33,7 +38,7 @@ impl<B: Backend> Model<B> {
         x
     }
 
-    pub fn soft_update(self, other: &Self, tau: f32) -> Self {
+    fn soft_update(self, other: &Self, tau: f32) -> Self {
         Self {
             fc1: soft_update_linear(self.fc1, &other.fc1, tau),
             fc2: soft_update_linear(self.fc2, &other.fc2, tau),

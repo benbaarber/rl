@@ -4,6 +4,8 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use burn::tensor::{backend::Backend, Tensor, TensorKind};
+
 use crate::util::summary_from_keys;
 
 /// Represents a Markov decision process, defining the dynamics of an environment
@@ -52,6 +54,10 @@ pub trait DiscreteActionSpace: Environment {
     ///
     /// The returned slice should never be empty, instead specify an action that represents doing nothing if necessary.
     fn actions(&self) -> Vec<Self::Action>;
+}
+
+pub trait ToTensor<B: Backend, const D: usize, K: TensorKind<B>> {
+    fn to_tensor(self, device: &B::Device) -> Tensor<B, D, K>;
 }
 
 /// A format for reporting training results to [viz](crate::viz)

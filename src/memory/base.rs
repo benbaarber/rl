@@ -2,9 +2,8 @@ use rand::{seq::SliceRandom, thread_rng};
 
 use crate::{ds::RingBuffer, env::Environment};
 
-use super::{DynamicExpBatch, Exp, ExpBatch};
+use super::{Exp, ExpBatch};
 
-// TODO: Split replay memory into two structs: ReplayMemory and DynamicReplayMemory, where the former has a const generic batch size
 /// A fixed-size memory storage for reinforcement learning experiences
 ///
 /// This structure uses a ring buffer to store experiences, which are tuples of (state, action, next state, reward).
@@ -15,21 +14,17 @@ use super::{DynamicExpBatch, Exp, ExpBatch};
 ///
 /// ### Fields:
 /// - `memory`: A `RingBuffer` that stores the experiences
-pub struct ReplayMemory<const B: usize, E: Environment> {
+pub struct ReplayMemory<E: Environment> {
     memory: RingBuffer<Exp<E>>,
+    pub batch_size: usize,
 }
 
-impl<const B: usize, E: Environment> ReplayMemory<B, E> {
-    pub fn new(capacity: usize) -> Self {
+impl<E: Environment> ReplayMemory<E> {
+    /// Construct a new `ReplayMemory` with a given capacity and batch size
+    pub fn new(capacity: usize, batch_size: usize) -> Self {
         Self {
             memory: RingBuffer::<Exp<E>>::new(capacity),
-        }
-    }
-
-    /// Construct a new `ReplayMemory` from a provided array of experiences
-    pub fn from(data: Vec<Exp<E>>) -> Self {
-        Self {
-            memory: RingBuffer::from(data),
+            batch_size,
         }
     }
 
@@ -41,36 +36,14 @@ impl<const B: usize, E: Environment> ReplayMemory<B, E> {
     /// Sample a random batch of experiences from the memory
     ///
     /// ### Returns
-    /// - `Some(experiences)` if `S` is less than or equal to the buffer length
-    /// - `None` otherwise
-    pub fn sample(&self) -> Option<[Exp<E>; B]> {
-        if B <= self.memory.len() {
+    /// - `None` if there are less experiences stored than can fill a batch
+    /// - `Some(experiences)` otherwise
+    pub fn sample(&self) -> Option<Vec<&Exp<E>>> {
+        if self.batch_size <= self.memory.len() {
             Some(
                 self.memory
                     .view()
-                    .choose_multiple(&mut thread_rng(), B)
-                    .cloned()
-                    .collect::<Vec<_>>()
-                    .try_into()
-                    .ok()
-                    .unwrap(),
-            )
-        } else {
-            None
-        }
-    }
-
-    /// Sample a random batch of experiences from the memory
-    ///
-    /// ### Returns
-    /// - `Some(experiences)` if `batch_size` is less than or equal to the buffer length
-    /// - `None` otherwise
-    pub fn sample_dyn(&self, batch_size: usize) -> Option<Vec<&Exp<E>>> {
-        if batch_size <= self.memory.len() {
-            Some(
-                self.memory
-                    .view()
-                    .choose_multiple(&mut thread_rng(), batch_size)
+                    .choose_multiple(&mut thread_rng(), self.batch_size)
                     .collect(),
             )
         } else {
@@ -81,35 +54,16 @@ impl<const B: usize, E: Environment> ReplayMemory<B, E> {
     /// Sample a random batch of experiences from the memory and zip the vector of tuples into a tuple of vectors
     ///
     /// ### Returns
-    /// - `Some(batch)` if `S` is less than or equal to the buffer length
-    /// - `None` otherwise
-    pub fn sample_zipped(&self) -> Option<ExpBatch<E, B>> {
-        if B <= self.memory.len() {
+    /// - `None` if there are less experiences stored than can fill a batch
+    /// - `Some(experiences)` otherwise
+    pub fn sample_zipped(&self) -> Option<ExpBatch<E>> {
+        if self.batch_size <= self.memory.len() {
             let experiences = self
                 .memory
                 .view()
-                .choose_multiple(&mut thread_rng(), B)
+                .choose_multiple(&mut thread_rng(), self.batch_size)
                 .cloned();
-            let batch = ExpBatch::from_iter(experiences);
-            Some(batch)
-        } else {
-            None
-        }
-    }
-
-    /// Sample a random batch of experiences from the memory and zip the vector of tuples into a tuple of vectors
-    ///
-    /// ### Returns
-    /// - `Some(batch)` if `batch_size` is less than or equal to the buffer length
-    /// - `None` otherwise
-    pub fn sample_zipped_dyn(&self, batch_size: usize) -> Option<DynamicExpBatch<E>> {
-        if batch_size <= self.memory.len() {
-            let experiences = self
-                .memory
-                .view()
-                .choose_multiple(&mut thread_rng(), batch_size)
-                .cloned();
-            let batch = DynamicExpBatch::from_iter(experiences, batch_size);
+            let batch = ExpBatch::from_iter(experiences, self.batch_size);
             Some(batch)
         } else {
             None
@@ -140,9 +94,6 @@ mod tests {
         }
     }
 
-    const MEMORY_CAP: usize = 4;
-    const BATCH_SIZE: usize = 2;
-
     fn create_mock_exp_vec() -> Vec<Exp<MockEnv>> {
         (0..4)
             .into_iter()
@@ -158,23 +109,15 @@ mod tests {
     #[test]
     fn replay_memory_functional() {
         let experiences = create_mock_exp_vec();
-        let mut memory = ReplayMemory::<BATCH_SIZE, _>::new(MEMORY_CAP);
+        let mut memory = ReplayMemory::new(4, 2);
 
         assert!(
             memory.sample().is_none(),
             "sample none when too few experiences"
         );
         assert!(
-            memory.sample_dyn(BATCH_SIZE).is_none(),
-            "sample_dyn none when too few experiences"
-        );
-        assert!(
             memory.sample_zipped().is_none(),
             "sample_zipped none when too few experiences"
-        );
-        assert!(
-            memory.sample_zipped_dyn(BATCH_SIZE).is_none(),
-            "sample_zipped_dyn none when too few experiences"
         );
 
         for exp in experiences {
@@ -186,18 +129,8 @@ mod tests {
             "sample works"
         );
         assert!(
-            memory.sample_dyn(BATCH_SIZE).is_some_and(|b| b.len() == 2),
-            "sample_dyn works"
-        );
-        assert!(
             memory.sample_zipped().is_some_and(|b| b.states.len() == 2),
             "sample_zipped works"
-        );
-        assert!(
-            memory
-                .sample_zipped_dyn(BATCH_SIZE)
-                .is_some_and(|b| b.states.len() == 2),
-            "sample_zipped_dyn works"
         );
     }
 }

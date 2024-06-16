@@ -23,38 +23,9 @@ impl<E: Environment> Clone for Exp<E> {
     }
 }
 
-/// A zipped batch of [experiences](Exp) where the batch size is known at compile time
-///
-/// The batch size must be passed to the const generic `S`
+/// A zipped batch of [experiences](Exp)
 #[derive(Clone, Debug)]
-pub struct ExpBatch<E: Environment, const S: usize> {
-    /// The state of the environment before taking the action
-    pub states: [E::State; S],
-    /// The action taken in the given state
-    pub actions: [E::Action; S],
-    /// The state of the environment after the action is taken, or if terminal, `None`
-    pub next_states: [Option<E::State>; S],
-    /// The reward received after taking the action
-    pub rewards: [f32; S],
-}
-
-impl<E: Environment, const S: usize> ExpBatch<E, S> {
-    // TODO: try to avoid temporary heap allocation
-    /// Construct an `ExpBatch` from an iterator of [experiences](Exp)
-    pub fn from_iter(iter: impl IntoIterator<Item = Exp<E>>) -> Self {
-        let batch = DynamicExpBatch::from_iter(iter, S);
-        Self {
-            states: batch.states.try_into().ok().unwrap(),
-            actions: batch.actions.try_into().ok().unwrap(),
-            next_states: batch.next_states.try_into().ok().unwrap(),
-            rewards: batch.rewards.try_into().ok().unwrap(),
-        }
-    }
-}
-
-/// A zipped batch of [experiences](Exp) where the batch size is not known at compile time
-#[derive(Clone, Debug)]
-pub struct DynamicExpBatch<E: Environment> {
+pub struct ExpBatch<E: Environment> {
     /// The state of the environment before taking the action
     pub states: Vec<E::State>,
     /// The action taken in the given state
@@ -65,7 +36,7 @@ pub struct DynamicExpBatch<E: Environment> {
     pub rewards: Vec<f32>,
 }
 
-impl<E: Environment> DynamicExpBatch<E> {
+impl<E: Environment> ExpBatch<E> {
     /// Construct an `ExpBatch` from an iterator of [experience](Exp) references and a specified batch size
     pub fn from_iter(iter: impl IntoIterator<Item = Exp<E>>, batch_size: usize) -> Self {
         let batch = Self {
@@ -129,22 +100,7 @@ mod tests {
     #[test]
     fn dynamic_exp_batch_from_iter() {
         let experiences = create_mock_exp_array();
-        let batch = DynamicExpBatch::from_iter(experiences, BATCH_SIZE);
-
-        assert_eq!(batch.states, [0, 1], "States constructed correctly");
-        assert_eq!(batch.actions, [1, 2], "States constructed correctly");
-        assert_eq!(
-            batch.next_states,
-            [Some(1), None],
-            "States constructed correctly"
-        );
-        assert_eq!(batch.rewards, [1.0, 0.0], "States constructed correctly");
-    }
-
-    #[test]
-    fn exp_batch_from_iter() {
-        let experiences = create_mock_exp_array();
-        let batch = ExpBatch::<_, BATCH_SIZE>::from_iter(experiences);
+        let batch = ExpBatch::from_iter(experiences, BATCH_SIZE);
 
         assert_eq!(batch.states, [0, 1], "States constructed correctly");
         assert_eq!(batch.actions, [1, 2], "States constructed correctly");

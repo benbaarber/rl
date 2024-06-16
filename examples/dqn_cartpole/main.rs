@@ -1,15 +1,16 @@
-use agent::Agent;
 use burn::backend::{wgpu, Autodiff, Wgpu};
 use gym_rs::utils::renderer::RenderMode;
 use model::ModelConfig;
 use once_cell::sync::Lazy;
-use rl::{decay, exploration::EpsilonGreedy, gym::CartPole, viz};
+use rl::{
+    algo::dqn::{DQNAgent, DQNAgentConfig},
+    gym::CartPole,
+    viz,
+};
 
-mod agent;
 mod model;
 
-type DQNBackend = Wgpu<wgpu::AutoGraphicsApi, f32, i32>;
-type DQNAutodiffBackend = Autodiff<DQNBackend>;
+type DQNBackend = Autodiff<Wgpu<wgpu::AutoGraphicsApi, f32, i32>>;
 
 static DEVICE: Lazy<wgpu::WgpuDevice> = Lazy::new(wgpu::WgpuDevice::default);
 
@@ -18,9 +19,9 @@ const NUM_EPISODES: u16 = 128;
 fn main() {
     let mut env = CartPole::new(RenderMode::None);
 
-    let model_config = ModelConfig::new(64, 128);
-    let exploration = EpsilonGreedy::new(decay::Exponential::new(1e-3, 0.915, 0.05).unwrap());
-    let mut agent = Agent::new(model_config, exploration);
+    let model = ModelConfig::new(64, 128).init::<DQNBackend>(&*DEVICE);
+    let agent_config = DQNAgentConfig::default();
+    let mut agent = DQNAgent::new(model, agent_config, &*DEVICE);
 
     let (handle, tx) = viz::init(env.report.keys(), NUM_EPISODES);
 

@@ -10,7 +10,7 @@ use nn::loss::{MseLoss, Reduction};
 
 use crate::{
     decay,
-    env::Environment,
+    env::{Environment, ToTensor},
     exploration::{Choice, EpsilonGreedy},
     memory::{Exp, ReplayMemory},
 };
@@ -34,14 +34,12 @@ pub trait DQNModel<B: AutodiffBackend, const D: usize>: AutodiffModule<B> {
     fn soft_update(self, other: &Self, tau: f32) -> Self;
 }
 
-pub trait DQNState {}
-
-pub struct DQNAgentConfig<B, M, E, O, const D: usize, const BS: usize>
+pub struct DQNAgentConfig<B, M, E, O, const D: usize>
 where
     B: AutodiffBackend,
     E: Environment,
 {
-    pub memory: ReplayMemory<BS, E>,
+    pub memory: ReplayMemory<E>,
     pub optimizer: O,
     pub loss: MseLoss<B>,
     pub exploration: EpsilonGreedy<decay::Exponential>,
@@ -53,8 +51,7 @@ where
 
 type AdamWOptimizer<M, B> = OptimizerAdaptor<AdamW<<B as AutodiffBackend>::InnerBackend>, M, B>;
 
-impl<B, M, E, const D: usize, const BS: usize> Default
-    for DQNAgentConfig<B, M, E, AdamWOptimizer<M, B>, D, BS>
+impl<B, M, E, const D: usize> Default for DQNAgentConfig<B, M, E, AdamWOptimizer<M, B>, D>
 where
     B: AutodiffBackend,
     M: DQNModel<B, D>,
@@ -62,7 +59,7 @@ where
 {
     fn default() -> Self {
         Self {
-            memory: ReplayMemory::new(50000),
+            memory: ReplayMemory::new(50000, 128),
             optimizer: AdamWConfig::new().init::<B, M>(),
             loss: MseLoss::new(),
             exploration: EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.05).unwrap()),
@@ -84,7 +81,7 @@ where
 ///     - The state and action types' implementations of [`Clone`] should be very lightweight, as they are cloned often.
 ///       Ideally, both types are [`Copy`].
 /// - `O`: An [`Optimizer`]
-pub struct DQNAgent<B, M, E, O, const D: usize, const BS: usize>
+pub struct DQNAgent<B, M, E, O, const D: usize>
 where
     B: AutodiffBackend,
     E: Environment,
@@ -92,7 +89,7 @@ where
     policy_net: Option<M>,
     target_net: Option<M>,
     device: &'static B::Device,
-    memory: ReplayMemory<BS, E>,
+    memory: ReplayMemory<E>,
     optimizer: O,
     loss: MseLoss<B>,
     exploration: EpsilonGreedy<decay::Exponential>,
@@ -102,23 +99,21 @@ where
     total_steps: u32,
 }
 
-impl<B, M, E, O, const D: usize, const BS: usize> DQNAgent<B, M, E, O, D, BS>
+impl<B, M, E, O, const D: usize> DQNAgent<B, M, E, O, D>
 where
     B: AutodiffBackend,
     M: DQNModel<B, D>,
     E: Environment,
     O: Optimizer<M, B>,
-    E::State: Into<Data<B::FloatElem, D>>,
-    [E::State; BS]: Into<Data<B::FloatElem, D>>,
-    E::Action: Into<Data<B::FloatElem, 2>>,
-    [E::Action; BS]: Into<Data<B::IntElem, 2>>,
+    Vec<E::State>: ToTensor<B, D, Float>,
+    Vec<E::Action>: ToTensor<B, 2, Int>,
     E::Action: From<usize>,
     B::IntElem: TryInto<usize, Error: Debug>,
 {
     pub fn new(
         model: M,
+        config: DQNAgentConfig<B, M, E, O, D>,
         device: &'static B::Device,
-        config: DQNAgentConfig<B, M, E, O, D, BS>,
     ) -> Self {
         let model_clone = model.clone();
         Self {
@@ -140,7 +135,7 @@ where
         match self.exploration.choose(self.total_steps) {
             Choice::Explore => E::random_action(),
             Choice::Exploit => {
-                let input = Tensor::from_data(state, self.device);
+                let input = vec![state].to_tensor(self.device);
                 let output = self
                     .policy_net
                     .as_ref()
@@ -158,39 +153,43 @@ where
             return;
         };
 
-        let mut non_terminal_mask = [false; BS];
-        for (i, s) in batch.next_states.iter().enumerate() {
-            if s.is_some() {
-                non_terminal_mask[i] = true;
-            }
-        }
-
-        let non_terminal_mask =
-            Tensor::<B, 1, Bool>::from_bool(non_terminal_mask.into(), self.device).unsqueeze_dim(1);
+        let non_terminal_mask = Tensor::<B, 1, Bool>::from_bool(
+            batch
+                .next_states
+                .iter()
+                .map(Option::is_some)
+                .collect::<Vec<_>>()
+                .as_slice()
+                .into(),
+            self.device,
+        )
+        .unsqueeze_dim(1);
 
         let next_states = Tensor::<B, D>::cat(
             batch
                 .next_states
                 .into_iter()
                 .flatten()
-                .map(|ns| Tensor::from_data(ns, self.device))
+                .map(|ns| vec![ns].to_tensor(self.device)) // finish
                 .collect::<Vec<_>>(),
             0,
         );
 
-        let states = Tensor::from_data(batch.states, self.device);
-        let actions = Tensor::from_data(batch.actions, self.device);
-        let rewards = Tensor::<B, 1>::from_floats(batch.rewards, self.device).unsqueeze_dim(1);
+        let states = batch.states.to_tensor(self.device);
+        let actions = batch.actions.to_tensor(self.device);
+        let rewards =
+            Tensor::<B, 1>::from_floats(batch.rewards.as_slice(), self.device).unsqueeze_dim(1);
 
         let policy_net = self.policy_net.take().unwrap();
         let target_net = self.target_net.take().unwrap();
 
         let q_values = policy_net.forward(states).gather(1, actions);
 
-        let expected_q_values = Tensor::<B, 2>::zeros([BS, 1], self.device).mask_where(
-            non_terminal_mask,
-            target_net.forward(next_states).max_dim(1).detach(),
-        );
+        let expected_q_values = Tensor::<B, 2>::zeros([self.memory.batch_size, 1], self.device)
+            .mask_where(
+                non_terminal_mask,
+                target_net.forward(next_states).max_dim(1).detach(),
+            );
 
         let discounted_expected_return = rewards + (expected_q_values * self.gamma);
 
