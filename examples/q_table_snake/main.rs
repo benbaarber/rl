@@ -1,10 +1,10 @@
-use rl::{algo::q_table::QTableAgent, decay, exploration::EpsilonGreedy, gym::GrassyField2, viz};
+use rl::{algo::q_table::QTableAgent, decay, exploration::EpsilonGreedy, gym::GrassyField, viz};
 
 const FIELD_SIZE: usize = 20;
 const NUM_EPISODES: u16 = 10000;
 
 fn main() {
-    let mut env = GrassyField2::<FIELD_SIZE>::new();
+    let mut env = GrassyField::<FIELD_SIZE>::new();
     let mut agent = QTableAgent::new(
         0.7,
         0.95,

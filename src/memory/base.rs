@@ -73,26 +73,9 @@ impl<E: Environment> ReplayMemory<E> {
 
 #[cfg(test)]
 mod tests {
+    use crate::env::tests::MockEnv;
+
     use super::*;
-
-    struct MockEnv;
-
-    impl Environment for MockEnv {
-        type State = i32;
-        type Action = i32;
-
-        fn step(&mut self, _action: Self::Action) -> (Option<Self::State>, f32) {
-            (None, 0.0)
-        }
-
-        fn reset(&mut self) -> Self::State {
-            0
-        }
-
-        fn random_action() -> Self::Action {
-            0
-        }
-    }
 
     fn create_mock_exp_vec() -> Vec<Exp<MockEnv>> {
         (0..4)

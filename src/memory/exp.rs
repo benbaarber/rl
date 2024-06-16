@@ -58,26 +58,9 @@ impl<E: Environment> ExpBatch<E> {
 
 #[cfg(test)]
 mod tests {
+    use crate::env::tests::MockEnv;
+
     use super::*;
-
-    struct MockEnv;
-
-    impl Environment for MockEnv {
-        type State = i32;
-        type Action = i32;
-
-        fn step(&mut self, _action: Self::Action) -> (Option<Self::State>, f32) {
-            (None, 0.0)
-        }
-
-        fn reset(&mut self) -> Self::State {
-            0
-        }
-
-        fn random_action() -> Self::Action {
-            0
-        }
-    }
 
     const BATCH_SIZE: usize = 2;
 
@@ -98,7 +81,7 @@ mod tests {
     }
 
     #[test]
-    fn dynamic_exp_batch_from_iter() {
+    fn exp_batch_from_iter() {
         let experiences = create_mock_exp_array();
         let batch = ExpBatch::from_iter(experiences, BATCH_SIZE);
 

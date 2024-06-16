@@ -1,4 +1,3 @@
-use rand::{seq::SliceRandom, thread_rng};
 use std::{collections::HashMap, hash::Hash};
 
 use crate::{
@@ -59,18 +58,17 @@ where
     E::State: Copy + Eq + Hash,
     E::Action: Copy + Eq + Hash,
 {
-    fn act(&self, state: E::State, actions: &[E::Action]) -> E::Action {
-        let random = || actions.choose(&mut thread_rng()).unwrap();
-        *match self.exploration.choose(self.episode) {
-            Choice::Explore => random(),
-            Choice::Exploit => actions
-                .iter()
+    fn act(&self, env: &E, state: E::State, actions: &[E::Action]) -> E::Action {
+        match self.exploration.choose(self.episode) {
+            Choice::Explore => env.random_action(),
+            Choice::Exploit => *actions
+                .into_iter()
                 .max_by(|&a, &b| {
                     let a_value = *self.q_table.get(&(state, *a)).unwrap_or(&0.0);
                     let b_value = *self.q_table.get(&(state, *b)).unwrap_or(&0.0);
                     a_value.partial_cmp(&b_value).unwrap()
                 })
-                .unwrap_or_else(random),
+                .expect("There is always at least one action available"), // Maybe make this more lenient by providing a default?
         }
     }
 
@@ -102,7 +100,7 @@ where
         let mut next_state = Some(env.reset());
         let mut actions = env.actions();
         while let Some(state) = next_state {
-            let action = self.act(state, &actions);
+            let action = self.act(env, state, &actions);
             let (next, reward) = env.step(action);
             next_state = next;
             actions = env.actions();

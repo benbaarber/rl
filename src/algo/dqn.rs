@@ -81,6 +81,7 @@ where
 ///     - The state and action types' implementations of [`Clone`] should be very lightweight, as they are cloned often.
 ///       Ideally, both types are [`Copy`].
 /// - `O`: An [`Optimizer`]
+/// - `D`: The dimension of the input
 pub struct DQNAgent<B, M, E, O, const D: usize>
 where
     B: AutodiffBackend,
@@ -110,6 +111,7 @@ where
     E::Action: From<usize>,
     B::IntElem: TryInto<usize, Error: Debug>,
 {
+    /// Initialize a new `DQNAgent`
     pub fn new(
         model: M,
         config: DQNAgentConfig<B, M, E, O, D>,
@@ -131,9 +133,9 @@ where
         }
     }
 
-    fn act(&self, state: E::State) -> E::Action {
+    fn act(&self, env: &E, state: E::State) -> E::Action {
         match self.exploration.choose(self.total_steps) {
-            Choice::Explore => E::random_action(),
+            Choice::Explore => env.random_action(),
             Choice::Exploit => {
                 let input = vec![state].to_tensor(self.device);
                 let output = self
@@ -206,7 +208,7 @@ where
         let mut next_state = Some(env.reset());
 
         while let Some(state) = next_state {
-            let action = self.act(state.clone());
+            let action = self.act(env, state.clone());
             let (next, reward) = env.step(action.clone());
             next_state = next;
 
@@ -222,3 +224,6 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {}

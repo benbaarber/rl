@@ -1,3 +1,5 @@
+use rand::{seq::IteratorRandom, thread_rng};
+
 use crate::env::{DiscreteActionSpace, Environment, Report};
 
 #[derive(PartialEq)]
@@ -86,8 +88,11 @@ impl Environment for FrozenLake {
         }
     }
 
-    fn random_action() -> Self::Action {
-        FLAction::Down // TODO: random actions when available actions are state dependent require instance as parameter
+    fn random_action(&self) -> Self::Action {
+        self.actions()
+            .into_iter()
+            .choose(&mut thread_rng())
+            .expect("There is always at least one available action in this environment")
     }
 
     fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32) {

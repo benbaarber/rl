@@ -17,7 +17,7 @@ static DEVICE: Lazy<wgpu::WgpuDevice> = Lazy::new(wgpu::WgpuDevice::default);
 const NUM_EPISODES: u16 = 128;
 
 fn main() {
-    let mut env = CartPole::new(RenderMode::None);
+    let mut env = CartPole::new(RenderMode::Human);
 
     let model = ModelConfig::new(64, 128).init::<DQNBackend>(&*DEVICE);
     let agent_config = DQNAgentConfig::default();

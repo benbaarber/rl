@@ -40,7 +40,7 @@ pub trait Environment {
     fn reset(&mut self) -> Self::State;
 
     /// Select a random action from the action space
-    fn random_action() -> Self::Action;
+    fn random_action(&self) -> Self::Action;
 
     /// Determine if the environment is in an active or terminal state
     fn is_active(&self) -> bool {
@@ -56,6 +56,11 @@ pub trait DiscreteActionSpace: Environment {
     fn actions(&self) -> Vec<Self::Action>;
 }
 
+/// A trait for converting items to tensors
+///
+/// Commonly implemented for `Vec<T>` to convert batches of `T` to a tensor of dimension `D`
+///
+/// See implementations of this for [`CartPole`](crate::gym::CartPole) as an example of how to implement this trait
 pub trait ToTensor<B: Backend, const D: usize, K: TensorKind<B>> {
     fn to_tensor(self, device: &B::Device) -> Tensor<B, D, K>;
 }
@@ -102,5 +107,56 @@ impl Deref for Report {
 impl DerefMut for Report {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.map
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use super::*;
+
+    pub(crate) struct MockEnv;
+
+    impl Environment for MockEnv {
+        type State = i32;
+        type Action = i32;
+
+        fn step(&mut self, _action: Self::Action) -> (Option<Self::State>, f32) {
+            (None, 0.0)
+        }
+
+        fn reset(&mut self) -> Self::State {
+            0
+        }
+
+        fn random_action(&self) -> Self::Action {
+            0
+        }
+    }
+
+    #[test]
+    fn report_functional() {
+        let mut report = Report::new(vec!["c", "a", "b"]);
+        assert_eq!(
+            *report.keys(),
+            ["a", "b", "c"],
+            "Keys were sorted on initialization"
+        );
+
+        report.entry("a").and_modify(|x| *x += 1.0);
+        assert_eq!(
+            *report.get("a").unwrap(),
+            1.0,
+            "Mutations on entries work and report derefs into inner map"
+        );
+
+        let inner_map = report.take();
+        assert!(
+            inner_map.values().eq([1.0, 0.0, 0.0].iter()),
+            "Inner map can be taken with correct values"
+        );
+        assert!(
+            report.values().eq([0.0, 0.0, 0.0].iter()),
+            "Taking inner map leaves default values in report"
+        );
     }
 }

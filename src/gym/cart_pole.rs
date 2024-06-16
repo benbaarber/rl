@@ -70,7 +70,7 @@ impl Environment for CartPole {
     type State = [f32; 4];
     type Action = CPAction;
 
-    fn random_action() -> Self::Action {
+    fn random_action(&self) -> Self::Action {
         CPAction::iter().choose(&mut thread_rng()).unwrap()
     }
 

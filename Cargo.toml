@@ -30,9 +30,5 @@ name = "q_table_snake"
 required-features = ["gym"]
 
 [[example]]
-name = "dqn_snake"
-required-features = ["gym"]
-
-[[example]]
 name = "dqn_cartpole"
 required-features = ["gym"]
