@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 macro_rules! assert_interval {
     ($var:expr, $a:expr, $b:expr) => {
         assert!(
-            $var >= $a && $var <= $b,
+            ($a..=$b).contains(&$var),
             "Invalid value for `{}`. Must be in the interval [{}, {}].",
             stringify!($var),
             $a,
@@ -28,5 +28,5 @@ pub(crate) fn _format_float(float: f64, precision: usize) -> String {
 }
 
 pub(crate) fn summary_from_keys(keys: &[&'static str]) -> BTreeMap<&'static str, f64> {
-    keys.into_iter().map(|k| (*k, 0.0)).collect()
+    keys.iter().map(|k| (*k, 0.0)).collect()
 }

@@ -62,7 +62,7 @@ where
         match self.exploration.choose(self.episode) {
             Choice::Explore => env.random_action(),
             Choice::Exploit => *actions
-                .into_iter()
+                .iter()
                 .max_by(|&a, &b| {
                     let a_value = *self.q_table.get(&(state, *a)).unwrap_or(&0.0);
                     let b_value = *self.q_table.get(&(state, *b)).unwrap_or(&0.0);

@@ -22,7 +22,7 @@ impl<const A: usize> UCB<A> {
     pub fn choose(&mut self, t: f32, q_values: &[f32; A]) -> usize {
         let k = self.c * t.log10().sqrt();
         let choice = q_values
-            .into_iter()
+            .iter()
             .enumerate()
             .map(|(i, x)| (i, x + k * self.counter[i].powf(-0.5)))
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())

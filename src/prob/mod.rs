@@ -1,3 +1,4 @@
+#![allow(unused)]
 use rand::distributions::Distribution;
 
 /// Trait for probabilistic models

@@ -22,7 +22,7 @@ impl<D: Decay> Softmax<D> {
     /// Invoke softmax exploration policy at time `t` with provided Q values
     pub fn choose(&self, t: f32, q_values: &[f32]) -> usize {
         let tau = self.temperature.evaluate(t);
-        let exponentials = q_values.into_iter().map(|x| (x / tau).exp());
+        let exponentials = q_values.iter().map(|x| (x / tau).exp());
         let sum: f32 = exponentials.clone().sum();
         let weights = exponentials.map(|x| x / sum);
         let dist = WeightedIndex::new(weights).expect("`q_values` is not empty");

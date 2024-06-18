@@ -79,7 +79,6 @@ mod tests {
 
     fn create_mock_exp_vec() -> Vec<Exp<MockEnv>> {
         (0..4)
-            .into_iter()
             .map(|i| Exp {
                 state: i,
                 action: i + 1,

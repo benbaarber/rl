@@ -17,9 +17,10 @@ pub mod exploration;
 pub mod memory;
 
 /// Probabilistic models
-pub mod prob;
+mod prob;
 
 /// Training visualization TUI
+#[cfg(feature = "viz")]
 pub mod viz;
 
 /// Testing environments

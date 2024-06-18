@@ -1,3 +1,4 @@
+#![allow(clippy::len_without_is_empty)]
 use std::ops::Index;
 
 /// A fixed-size ringbuffer
