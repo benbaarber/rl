@@ -2,6 +2,7 @@ use rand::{seq::IteratorRandom, thread_rng};
 
 use crate::env::{DiscreteActionSpace, Environment, Report};
 
+/// The possible types of squares in the [`FrozenLake`] grid
 #[derive(PartialEq)]
 pub enum Square {
     Frozen = 0,
@@ -10,6 +11,7 @@ pub enum Square {
     Goal = 3,
 }
 
+/// Actions for the [`FrozenLake`] environment, representing taking a step in a direction
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum FLAction {
     Left = 0,
@@ -20,7 +22,7 @@ pub enum FLAction {
 
 /// A very simple RL environment taken from Python [gymnasium](https://gymnasium.farama.org/)
 ///
-/// Intended for use with a [QTableAgent](crate::algo::QTableAgent)
+/// Intended for use with a [QTableAgent](crate::algo::q_table::QTableAgent)
 pub struct FrozenLake {
     map: [Square; 16],
     pos: usize,

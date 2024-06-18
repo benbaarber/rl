@@ -7,7 +7,29 @@ use crate::{
     memory::Exp,
 };
 
+/// Configuration for the [`QTableAgent`]
+pub struct QTableAgentConfig {
+    pub exploration: EpsilonGreedy<decay::Exponential>,
+    pub alpha: f32,
+    pub gamma: f32,
+}
+
+impl Default for QTableAgentConfig {
+    fn default() -> Self {
+        Self {
+            exploration: EpsilonGreedy::new(decay::Exponential::new(0.1, 1.0, 0.01).unwrap()),
+            alpha: 0.7,
+            gamma: 0.99,
+        }
+    }
+}
+
 /// A simple Q-learning agent that utilizes a Q-table to learn its environment
+///
+/// ### Generics
+/// - `E`: The [`Environment`] in which the agent will learn
+///     - The environment's state and action spaces must both be discrete because a Q value will be recorded for each state action pair
+///     - For the same reason, the state and action types must be `Copy`, `Eq`, and `Hash` to be used as keys in a [`HashMap`]
 pub struct QTableAgent<E>
 where
     E: Environment + DiscreteActionSpace,
@@ -15,9 +37,9 @@ where
     E::Action: Copy + Eq + Hash,
 {
     q_table: HashMap<(E::State, E::Action), f32>,
-    alpha: f32, // learning rate
-    gamma: f32, // discount factor
     exploration: EpsilonGreedy<decay::Exponential>,
+    alpha: f32,   // learning rate
+    gamma: f32,   // discount factor
     episode: u32, // current episode
 }
 
@@ -35,14 +57,14 @@ where
     /// - `exploration`: A customized [EpsilonGreedy] policy
     ///
     /// **Panics** if `alpha` or `gamma` is not in the interval `[0,1]`
-    pub fn new(alpha: f32, gamma: f32, exploration: EpsilonGreedy<decay::Exponential>) -> Self {
-        assert_interval!(alpha, 0.0, 1.0);
-        assert_interval!(gamma, 0.0, 1.0);
+    pub fn new(config: QTableAgentConfig) -> Self {
+        assert_interval!(config.alpha, 0.0, 1.0);
+        assert_interval!(config.gamma, 0.0, 1.0);
         Self {
             q_table: HashMap::new(),
-            alpha,
-            gamma,
-            exploration,
+            exploration: config.exploration,
+            alpha: config.alpha,
+            gamma: config.gamma,
             episode: 0,
         }
     }

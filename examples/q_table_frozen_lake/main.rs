@@ -1,14 +1,20 @@
-use rl::{algo::q_table::QTableAgent, decay, exploration::EpsilonGreedy, gym::FrozenLake, viz};
+use rl::{
+    algo::q_table::{QTableAgent, QTableAgentConfig},
+    decay,
+    exploration::EpsilonGreedy,
+    gym::FrozenLake,
+    viz,
+};
 
 const NUM_EPISODES: u16 = 10000;
 
 fn main() {
     let mut env = FrozenLake::new();
-    let mut agent = QTableAgent::new(
-        0.7,
-        0.95,
-        EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.01).unwrap()),
-    );
+    let config = QTableAgentConfig {
+        exploration: EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.01).unwrap()),
+        ..Default::default()
+    };
+    let mut agent = QTableAgent::new(config);
 
     let (handle, tx) = viz::init(env.report.keys(), NUM_EPISODES);
 

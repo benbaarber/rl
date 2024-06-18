@@ -4,9 +4,9 @@ use gym_rs::envs::classical_control::cartpole::{CartPoleEnv, CartPoleObservation
 use gym_rs::utils::renderer::RenderMode;
 use rand::seq::IteratorRandom;
 use rand::thread_rng;
-use strum::{EnumIter, FromRepr, IntoEnumIterator};
+use strum::{EnumIter, FromRepr, IntoEnumIterator, VariantArray};
 
-use crate::env::{Environment, Report, ToTensor};
+use crate::env::{DiscreteActionSpace, Environment, Report, ToTensor};
 
 fn obs2arr(observation: CartPoleObservation) -> [f32; 4] {
     Vec::from(observation)
@@ -17,7 +17,8 @@ fn obs2arr(observation: CartPoleObservation) -> [f32; 4] {
         .expect("vec is length 4")
 }
 
-#[derive(FromRepr, EnumIter, Clone, Copy, Debug)]
+/// Actions for the [`CartPole`] environment, representing applying a left or right force to the cart
+#[derive(FromRepr, EnumIter, VariantArray, Clone, Copy, Debug)]
 pub enum CPAction {
     Left = 0,
     Right = 1,
@@ -51,6 +52,9 @@ impl<B: Backend<FloatElem = f32>> ToTensor<B, 2, Float> for Vec<[f32; 4]> {
     }
 }
 
+/// The classic CartPole reinforcement learning environment
+///
+/// This implementation is a thin wrapper around [gym_rs](https://github.com/MathisWellmann/gym-rs)
 #[derive(Debug)]
 pub struct CartPole {
     gym_env: CartPoleEnv,
@@ -95,5 +99,11 @@ impl Environment for CartPole {
 
     fn reset(&mut self) -> Self::State {
         obs2arr(self.gym_env.reset(None, false, None).0)
+    }
+}
+
+impl DiscreteActionSpace for CartPole {
+    fn actions(&self) -> Vec<Self::Action> {
+        CPAction::VARIANTS.to_vec()
     }
 }
