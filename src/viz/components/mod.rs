@@ -1,4 +1,5 @@
 pub mod heatmap_scatter_plot;
+pub mod help;
 pub mod log;
 pub mod plot;
 

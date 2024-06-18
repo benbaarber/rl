@@ -48,7 +48,7 @@ impl Component for Logs {
             KeyCode::Right => TuiWidgetEvent::RightKey,
             KeyCode::Char('=') | KeyCode::Char('+') => TuiWidgetEvent::PlusKey,
             KeyCode::Char('-') | KeyCode::Char('_') => TuiWidgetEvent::MinusKey,
-            KeyCode::Char('h') => TuiWidgetEvent::HideKey,
+            KeyCode::Char('s') => TuiWidgetEvent::HideKey,
             KeyCode::Char('f') => TuiWidgetEvent::FocusKey,
             _ => return false,
         };

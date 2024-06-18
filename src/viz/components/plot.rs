@@ -135,7 +135,7 @@ impl Plots {
     pub fn new(names: Vec<&'static str>, episodes: u16) -> Self {
         let plots = names
             .iter()
-            .map(|k| Plot::new(*k).with_x_bounds([0.0, episodes.into()]))
+            .map(|k| Plot::new(k).with_x_bounds([0.0, episodes.into()]))
             .collect();
         Self {
             plot_names: names,
@@ -174,7 +174,7 @@ impl WidgetRef for Plots {
             .select(self.selected)
             .render(area, buf);
 
-        if self.plots.len() > 0 {
+        if !self.plots.is_empty() {
             self.plots[self.selected].render(area, buf);
         }
     }

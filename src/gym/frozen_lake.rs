@@ -27,6 +27,12 @@ pub struct FrozenLake {
     pub report: Report,
 }
 
+impl Default for FrozenLake {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FrozenLake {
     pub fn new() -> Self {
         // TODO: Support custom maps

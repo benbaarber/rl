@@ -33,9 +33,8 @@ impl<B: AutodiffBackend> DQNModel<B, 2> for Model<B> {
     fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
         let x = relu(self.fc1.forward(input));
         let x = relu(self.fc2.forward(x));
-        let x = self.fc3.forward(x);
 
-        x
+        self.fc3.forward(x)
     }
 
     fn soft_update(self, other: &Self, tau: f32) -> Self {

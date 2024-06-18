@@ -1,4 +1,4 @@
-use burn::backend::{wgpu, Autodiff, Wgpu};
+use burn::backend::{wgpu::WgpuDevice, Autodiff, Wgpu};
 use gym_rs::utils::renderer::RenderMode;
 use model::ModelConfig;
 use once_cell::sync::Lazy;
@@ -10,9 +10,9 @@ use rl::{
 
 mod model;
 
-type DQNBackend = Autodiff<Wgpu<wgpu::AutoGraphicsApi, f32, i32>>;
+type DQNBackend = Autodiff<Wgpu>;
 
-static DEVICE: Lazy<wgpu::WgpuDevice> = Lazy::new(wgpu::WgpuDevice::default);
+static DEVICE: Lazy<WgpuDevice> = Lazy::new(WgpuDevice::default);
 
 const NUM_EPISODES: u16 = 128;
 

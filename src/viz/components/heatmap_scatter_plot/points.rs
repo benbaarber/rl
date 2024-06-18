@@ -30,7 +30,7 @@ impl<'a> Shape for Points<'a> {
             }
         }
 
-        if density_map.len() == 0 {
+        if density_map.is_empty() {
             return;
         }
 

@@ -64,6 +64,12 @@ pub struct GrassyField<const S: usize> {
     pub report: Report,
 }
 
+impl<const S: usize> Default for GrassyField<S> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const S: usize> GrassyField<S> {
     pub fn new() -> Self {
         Self {

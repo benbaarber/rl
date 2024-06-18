@@ -5,7 +5,7 @@ use std::{
 };
 
 use super::{
-    components::{Component, Logs, Plots},
+    components::{help::render_help, Component, Logs, Plots},
     util::event_keycode,
 };
 use crossterm::event::{
@@ -39,6 +39,7 @@ pub struct App {
     episode: u16,
     total_episodes: u16,
     selected_tab: usize,
+    show_help: bool,
     plots: Plots,
     logs: Logs,
 }
@@ -50,6 +51,7 @@ impl App {
             episode: 0,
             total_episodes: episodes,
             selected_tab: 0,
+            show_help: false,
             plots: Plots::new(plots.to_vec(), episodes),
             logs: Logs::new(),
         }
@@ -65,7 +67,7 @@ impl App {
             return;
         }
 
-        let Some(key) = event_keycode(&event) else {
+        let Some(key) = event_keycode(event) else {
             return;
         };
 
@@ -75,6 +77,9 @@ impl App {
             }
             KeyCode::Char('q') => {
                 self.state = AppMode::Quit;
+            }
+            KeyCode::Char('h') => {
+                self.show_help ^= true;
             }
             _ => (),
         }
@@ -130,13 +135,27 @@ impl WidgetRef for App {
         .areas(area);
 
         // Menu
+        let [tabs_area, _, help_area] = Layout::horizontal([
+            Constraint::Length(TABS.join(" | ").len() as u16 + 4),
+            Constraint::Fill(1),
+            Constraint::Length("H - Help Screen".len() as u16 + 4),
+        ])
+        .areas(menu_area);
+
         Tabs::new(TABS)
-            .block(Block::default().padding(Padding::uniform(1)))
+            .block(Block::new().padding(Padding::uniform(1)))
             .white()
             .bold()
-            .highlight_style(Style::default().light_green())
+            .highlight_style(Style::new().light_green())
             .select(self.selected_tab)
-            .render(menu_area, buf);
+            .render(tabs_area, buf);
+
+        Paragraph::new(Line::from(vec![
+            Span::styled("H", Style::new().bold()),
+            Span::raw(" - Help Screen"),
+        ]))
+        .block(Block::new().padding(Padding::uniform(1)))
+        .render(help_area, buf);
 
         // Main
         match self.selected_tab {
@@ -144,7 +163,7 @@ impl WidgetRef for App {
             _ => self.plots.render(main_area, buf),
         }
 
-        // Progress Bar
+        // Progress
         Gauge::default()
             .block(
                 Block::bordered()
@@ -152,7 +171,12 @@ impl WidgetRef for App {
                     .title("Progress"),
             )
             .gauge_style(Color::Cyan)
-            .ratio(self.episode as f64 / self.total_episodes as f64)
+            .ratio((self.episode + 1) as f64 / self.total_episodes as f64)
             .render(progress_area, buf);
+
+        // Help Popup
+        if self.show_help {
+            render_help(area, buf, self.selected_tab);
+        }
     }
 }
