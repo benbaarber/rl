@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use burn::{
     module::AutodiffModule,
-    optim::{adaptor::OptimizerAdaptor, AdamW, AdamWConfig, GradientsParams, Optimizer},
+    optim::{AdamWConfig, GradientsParams, Optimizer},
     prelude::*,
     tensor::backend::AutodiffBackend,
 };
@@ -35,14 +35,14 @@ pub trait DQNModel<B: AutodiffBackend, const D: usize>: AutodiffModule<B> {
 }
 
 /// Configuration for the [`DQNAgent`] (see for information on generic types)
-pub struct DQNAgentConfig<E, const D: usize, O>
+pub struct DQNAgentConfig<E, const D: usize>
 where
     E: Environment,
 {
     /// A [`ReplayMemory`] to store and sample the agent's past experiences
     pub memory: ReplayMemory<E>,
-    /// The [`Optimizer`] to train the policy network with
-    pub optimizer: O,
+    // /// The [`Optimizer`] to train the policy network with
+    // pub optimizer: O,
     /// The exploration policy, currently limited to epsilon greedy
     pub exploration: EpsilonGreedy<decay::Exponential>,
     /// The discount factor
@@ -53,18 +53,18 @@ where
     pub lr: f32,
 }
 
-type AdamWOptimizer<M, B> = OptimizerAdaptor<AdamW<<B as AutodiffBackend>::InnerBackend>, M, B>;
+// type AdamWOptimizer<M, B> = OptimizerAdaptor<AdamW<<B as AutodiffBackend>::InnerBackend>, M, B>;
 
-impl<B, M, E, const D: usize> Default for DQNAgentConfig<E, D, AdamWOptimizer<M, B>>
+impl<E, const D: usize> Default for DQNAgentConfig<E, D>
 where
-    B: AutodiffBackend,
-    M: DQNModel<B, D>,
+    // B: AutodiffBackend,
+    // M: DQNModel<B, D>,
     E: Environment,
 {
     fn default() -> Self {
         Self {
             memory: ReplayMemory::new(50000, 128),
-            optimizer: AdamWConfig::new().init(),
+            // optimizer: AdamWConfig::new().init(),
             exploration: EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.05).unwrap()),
             gamma: 0.999,
             tau: 5e-3,
@@ -82,9 +82,10 @@ where
 ///     - The environment's action space must be discrete, since the policy network produces a Q value for each action.
 ///     - The state and action types' implementations of [`Clone`] should be very lightweight, as they are cloned often.
 ///       Ideally, both types are [`Copy`].
-/// - `O`: An [`Optimizer`]
 /// - `D`: The dimension of the input
-pub struct DQNAgent<B, M, E, const D: usize, O>
+/// 
+/// A generic optimizer will be added when burn v0.14.0 releases, until then the [`AdamW`] optimizer will be used
+pub struct DQNAgent<B, M, E, const D: usize>
 where
     B: AutodiffBackend,
     E: Environment,
@@ -93,7 +94,7 @@ where
     target_net: Option<M>,
     device: &'static B::Device,
     memory: ReplayMemory<E>,
-    optimizer: O,
+    // optimizer: O,
     loss: MseLoss<B>, // TODO: make this generic
     exploration: EpsilonGreedy<decay::Exponential>,
     gamma: f32,
@@ -102,12 +103,12 @@ where
     total_steps: u32,
 }
 
-impl<B, M, E, const D: usize, O> DQNAgent<B, M, E, D, O>
+impl<B, M, E, const D: usize> DQNAgent<B, M, E, D>
 where
     B: AutodiffBackend,
     M: DQNModel<B, D>,
     E: Environment,
-    O: Optimizer<M, B>,
+    // O: Optimizer<M, B>,
     Vec<E::State>: ToTensor<B, D, Float>,
     Vec<E::Action>: ToTensor<B, 2, Int>,
     E::Action: From<usize>,
@@ -119,14 +120,14 @@ where
     /// - `model` A [`DQNModel`] to be used as the policy and target networks
     /// - `config` A [`DQNAgentConfig`] containing components and hyperparameters for the agent
     /// - `device` A static reference to the device used for the `model`
-    pub fn new(model: M, config: DQNAgentConfig<E, D, O>, device: &'static B::Device) -> Self {
+    pub fn new(model: M, config: DQNAgentConfig<E, D>, device: &'static B::Device) -> Self {
         let model_clone = model.clone();
         Self {
             policy_net: Some(model),
             target_net: Some(model_clone),
             device,
             memory: config.memory,
-            optimizer: config.optimizer,
+            // optimizer: config.optimizer,
             loss: MseLoss::new(),
             exploration: config.exploration,
             gamma: config.gamma,
@@ -155,7 +156,7 @@ where
     }
 
     /// Perform one DQN learning step
-    fn learn(&mut self) {
+    fn learn(&mut self, optimizer: &mut impl Optimizer<M, B>) {
         // Sample a batch of memories to train on
         let Some(batch) = self.memory.sample_zipped() else {
             return;
@@ -211,7 +212,7 @@ where
 
         // Perform backpropagation on policy net
         let grads = GradientsParams::from_grads(loss.backward(), &policy_net);
-        self.policy_net = Some(self.optimizer.step(self.lr.into(), policy_net, grads));
+        self.policy_net = Some(optimizer.step(self.lr.into(), policy_net, grads));
 
         // Perform a soft update on the parameters of the target network for stable convergence
         self.target_net = Some(target_net.soft_update(self.policy_net.as_ref().unwrap(), self.tau));
@@ -219,6 +220,7 @@ where
 
     /// Deploy the `DQNAgent` into the environment for one episode
     pub fn go(&mut self, env: &mut E) {
+        let mut optimizer = AdamWConfig::new().init();
         let mut next_state = Some(env.reset());
 
         while let Some(state) = next_state {
@@ -233,7 +235,7 @@ where
                 reward,
             });
 
-            self.learn();
+            self.learn(&mut optimizer);
             self.total_steps += 1;
         }
     }
