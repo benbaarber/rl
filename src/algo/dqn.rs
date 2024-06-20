@@ -40,16 +40,30 @@ where
     E: Environment,
 {
     /// A [`ReplayMemory`] to store and sample the agent's past experiences
+    ///
+    /// **Default:** [`ReplayMemory`] with capacity `50000` and batch size `128`
     pub memory: ReplayMemory<E>,
     // /// The [`Optimizer`] to train the policy network with
     // pub optimizer: O,
     /// The exploration policy, currently limited to epsilon greedy
+    ///
+    /// **Default:** [`EpsilonGreedy`] with [`Exponential`](decay::Exponential) decay with decay rate `1e-3`, start value `1.0`, and end value `0.05`
     pub exploration: EpsilonGreedy<decay::Exponential>,
     /// The discount factor
+    ///
+    /// **Default:** `0.999`
     pub gamma: f32,
+    /// The interval at which to perform soft updates on the target network
+    ///
+    /// **Default:** `1`
+    pub target_update_interval: usize,
     /// The rate at which the target network's parameters are soft updated with the policy network's parameters
+    ///
+    /// **Default:** `5e-3`
     pub tau: f32,
     /// The learning rate for the optimizer
+    ///
+    /// **Default:** `1e-3`
     pub lr: f32,
 }
 
@@ -67,6 +81,7 @@ where
             // optimizer: AdamWConfig::new().init(),
             exploration: EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.05).unwrap()),
             gamma: 0.999,
+            target_update_interval: 1,
             tau: 5e-3,
             lr: 1e-3,
         }
@@ -83,7 +98,7 @@ where
 ///     - The state and action types' implementations of [`Clone`] should be very lightweight, as they are cloned often.
 ///       Ideally, both types are [`Copy`].
 /// - `D`: The dimension of the input
-/// 
+///
 /// A generic optimizer will be added when burn v0.14.0 releases, until then the [`AdamW`] optimizer will be used
 pub struct DQNAgent<B, M, E, const D: usize>
 where
@@ -98,9 +113,11 @@ where
     loss: MseLoss<B>, // TODO: make this generic
     exploration: EpsilonGreedy<decay::Exponential>,
     gamma: f32,
+    target_update_interval: usize,
     tau: f32,
     lr: f32,
     total_steps: u32,
+    episodes_elapsed: usize,
 }
 
 impl<B, M, E, const D: usize> DQNAgent<B, M, E, D>
@@ -131,9 +148,11 @@ where
             loss: MseLoss::new(),
             exploration: config.exploration,
             gamma: config.gamma,
+            target_update_interval: config.target_update_interval,
             tau: config.tau,
             lr: config.lr,
             total_steps: 0,
+            episodes_elapsed: 0,
         }
     }
 
@@ -215,7 +234,11 @@ where
         self.policy_net = Some(optimizer.step(self.lr.into(), policy_net, grads));
 
         // Perform a soft update on the parameters of the target network for stable convergence
-        self.target_net = Some(target_net.soft_update(self.policy_net.as_ref().unwrap(), self.tau));
+        self.target_net = if self.episodes_elapsed % self.target_update_interval == 0 {
+            Some(target_net.soft_update(self.policy_net.as_ref().unwrap(), self.tau))
+        } else {
+            Some(target_net)
+        };
     }
 
     /// Deploy the `DQNAgent` into the environment for one episode
