@@ -1,6 +1,7 @@
 /// A binary tree data structure where each parent node is the sum of its child nodes
 pub struct SumTree {
     tree: Vec<f32>,
+    max: f32,
     capacity: usize,
 }
 
@@ -10,6 +11,7 @@ impl SumTree {
         let capacity = capacity.next_power_of_two();
         Self {
             tree: vec![0.0; 2 * capacity - 1],
+            max: 0.0,
             capacity,
         }
     }
@@ -25,10 +27,14 @@ impl SumTree {
             ix = (ix - 1) / 2;
             self.tree[ix] += change;
         }
+
+        if value > self.max {
+            self.max = value;
+        }
     }
 
-    /// Find the first index `i` where the sum of the values from 0 to `i` is greater than `value`
-    pub fn find(&self, value: f32) -> usize {
+    /// Find the first index `i` and value `v` where the sum of the values from 0 to `i` is greater than `value`
+    pub fn find(&self, value: f32) -> (usize, f32) {
         let mut ix = 0;
         let mut val = value;
         while ix < self.capacity - 1 {
@@ -42,7 +48,18 @@ impl SumTree {
             }
         }
 
-        ix - (self.capacity - 1)
+        let ix = ix - (self.capacity - 1);
+        (ix, self.tree[ix])
+    }
+
+    /// Get the sum of all values stored
+    pub fn sum(&self) -> f32 {
+        self.tree[0]
+    }
+
+    /// Get the max of all values stored
+    pub fn max(&self) -> f32 {
+        self.max
     }
 }
 
@@ -67,7 +84,10 @@ mod tests {
             sumtree.tree[0], 28.0,
             "root node contains sum of entire tree"
         );
-        assert_eq!(sumtree.find(4.0), 3, "find works on left side");
-        assert_eq!(sumtree.find(18.0), 6, "find works on right side");
+        assert_eq!(sumtree.find(4.0), (3, 3.0), "find works on left side");
+        assert_eq!(sumtree.find(18.0), (6, 6.0), "find works on right side");
+
+        sumtree.update(3, 12.0);
+        assert_eq!(sumtree.max(), 12.0, "maximum value stored correctly");
     }
 }

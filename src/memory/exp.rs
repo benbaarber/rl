@@ -6,10 +6,10 @@ pub struct Exp<E: Environment> {
     pub state: E::State,
     /// The action taken in the given state
     pub action: E::Action,
-    /// The state of the environment after the action is taken, or if terminal, `None`
-    pub next_state: Option<E::State>,
     /// The reward received after taking the action
     pub reward: f32,
+    /// The state of the environment after the action is taken, or if terminal, `None`
+    pub next_state: Option<E::State>,
 }
 
 impl<E: Environment> Clone for Exp<E> {
@@ -17,8 +17,8 @@ impl<E: Environment> Clone for Exp<E> {
         Self {
             state: self.state.clone(),
             action: self.action.clone(),
-            next_state: self.next_state.clone(),
             reward: self.reward,
+            next_state: self.next_state.clone(),
         }
     }
 }
@@ -30,10 +30,10 @@ pub struct ExpBatch<E: Environment> {
     pub states: Vec<E::State>,
     /// The action taken in the given state
     pub actions: Vec<E::Action>,
-    /// The state of the environment after the action is taken, or if terminal, `None`
-    pub next_states: Vec<Option<E::State>>,
     /// The reward received after taking the action
     pub rewards: Vec<f32>,
+    /// The state of the environment after the action is taken, or if terminal, `None`
+    pub next_states: Vec<Option<E::State>>,
 }
 
 impl<E: Environment> ExpBatch<E> {
@@ -42,15 +42,15 @@ impl<E: Environment> ExpBatch<E> {
         let batch = Self {
             states: Vec::with_capacity(batch_size),
             actions: Vec::with_capacity(batch_size),
-            next_states: Vec::with_capacity(batch_size),
             rewards: Vec::with_capacity(batch_size),
+            next_states: Vec::with_capacity(batch_size),
         };
 
         iter.into_iter().fold(batch, |mut b, e| {
             b.states.push(e.state.clone());
             b.actions.push(e.action.clone());
-            b.next_states.push(e.next_state.clone());
             b.rewards.push(e.reward);
+            b.next_states.push(e.next_state.clone());
             b
         })
     }
@@ -68,14 +68,14 @@ mod tests {
         let exp1 = Exp {
             state: 0,
             action: 1,
-            next_state: Some(1),
             reward: 1.0,
+            next_state: Some(1),
         };
         let exp2 = Exp {
             state: 1,
             action: 2,
-            next_state: None,
             reward: 0.0,
+            next_state: None,
         };
         [exp1, exp2]
     }
@@ -86,12 +86,12 @@ mod tests {
         let batch = ExpBatch::from_iter(experiences, BATCH_SIZE);
 
         assert_eq!(batch.states, [0, 1], "States constructed correctly");
-        assert_eq!(batch.actions, [1, 2], "States constructed correctly");
+        assert_eq!(batch.actions, [1, 2], "Actions constructed correctly");
+        assert_eq!(batch.rewards, [1.0, 0.0], "Rewards constructed correctly");
         assert_eq!(
             batch.next_states,
             [Some(1), None],
-            "States constructed correctly"
+            "Next states constructed correctly"
         );
-        assert_eq!(batch.rewards, [1.0, 0.0], "States constructed correctly");
     }
 }

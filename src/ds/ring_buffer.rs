@@ -4,7 +4,7 @@ use std::ops::Index;
 /// A fixed-size ringbuffer
 pub struct RingBuffer<T> {
     buffer: Vec<T>,
-    i: usize,
+    ix: usize,
     capacity: usize,
 }
 
@@ -12,7 +12,7 @@ impl<T> RingBuffer<T> {
     pub fn new(capacity: usize) -> Self {
         Self {
             buffer: Vec::<T>::with_capacity(capacity),
-            i: 0,
+            ix: 0,
             capacity,
         }
     }
@@ -22,7 +22,7 @@ impl<T> RingBuffer<T> {
         let capacity = data.len();
         Self {
             buffer: data,
-            i: 0,
+            ix: 0,
             capacity,
         }
     }
@@ -36,14 +36,16 @@ impl<T> RingBuffer<T> {
         self.capacity
     }
 
-    /// Insert an element into the buffer, overwriting the oldest element
-    pub fn push(&mut self, item: T) {
-        if self.i >= self.len() {
+    /// Insert an element into the buffer, overwriting the oldest element, and return the write index
+    pub fn push(&mut self, item: T) -> usize {
+        let ix = self.ix;
+        if ix >= self.len() {
             self.buffer.push(item);
         } else {
-            self.buffer[self.i] = item;
+            self.buffer[ix] = item;
         }
-        self.i = (self.i + 1) % self.capacity;
+        self.ix = (ix + 1) % self.capacity;
+        ix
     }
 
     /// Get a slice view of the internal buffer
@@ -109,7 +111,8 @@ mod tests {
         assert_eq!(buf.view(), [0, 2, 4, 6], "contents correct");
 
         buf.push(1);
-        buf.push(3);
+        let ix = buf.push(3);
+        assert_eq!(ix, 1, "write index is correct");
         assert_eq!(buf.len(), 4, "length unchanged");
         assert_eq!(buf.view(), [1, 3, 4, 6], "contents overwritten correctly");
     }

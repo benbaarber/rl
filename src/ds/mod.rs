@@ -1,4 +1,5 @@
-mod ringbuffer;
-mod sumtree;
+mod ring_buffer;
+mod sum_tree;
 
-pub use ringbuffer::RingBuffer;
+pub use ring_buffer::RingBuffer;
+pub use sum_tree::SumTree;
