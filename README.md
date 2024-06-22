@@ -5,17 +5,14 @@
 [![Rust Version](https://img.shields.io/badge/Rust-v1.79.0+-tan)](https://releases.rs/docs/1.79.0)
 
 ## About
-**rl** is a fully Rust-native reinforcement learning library with the goal of providing a unified RL development experience. This library is distinguished from other RL libraries in that
-it leverages Rust's powerful type system to enable users to reuse the provided production-ready implementations with arbitrary environments, state spaces, and action spaces through generics. 
-Libraries like PyTorch, Tensorflow, and Burn make implementing deep learning models easy, but implementing RL has always been a challenge. With **rl**, implementing RL in your project is just as easy.
+**rl** is a fully Rust-native reinforcement learning library with the goal of providing a unified RL development experience, aiming to do for RL what libraries like PyTorch did for deep learning. By leveraging Rust's powerful type system and the [**burn**](https://github.com/tracel-ai/burn) library, **rl** enables users to reuse production-ready SoTA algorithms with arbitrary environments, state spaces, and action spaces. 
 
-The other goal of this project is to provide a clean platform for experimentation with new RL algorithms, including benchmarking with existing SoTA algorithms. By exposing all the internal sub-algorithms and components of common RL algorithms,
-**rl** allows users to create new experimental agents without having to start from scratch. 
+This project also aims to provide a clean platform for experimentation with new RL algorithms. By combining **burn**'s powerful deep learning features with **rl**'s provided RL sub-algorithms and components, users can create, test, and benchmark their own new experimental agents without having to start from scratch.
 
 Currently, **rl** is in its early stages. Contributors are more than welcome!
 
 ## Features
- - High-performance production-ready implementations of all SoTA RL algorithms powered by the rust-native deep learning framework [burn](https://github.com/tracel-ai/burn)
+ - High-performance production-ready implementations of all SoTA RL algorithms
  - Detailed logging and training visualization TUI (see image below)
  - Maximum extensibility for creating and testing new experimental algorithms
  - Gym environments
