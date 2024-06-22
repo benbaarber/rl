@@ -10,10 +10,10 @@ use super::{Exp, ExpBatch};
 /// It automatically overwrites the oldest experiences once it reaches its capacity.
 ///
 /// ### Type Parameters:
-/// - `E`: Environment
+/// - `E` - Environment
 ///
 /// ### Fields:
-/// - `memory`: A `RingBuffer` that stores the experiences
+/// - `memory` - A `RingBuffer` that stores the experiences
 pub struct ReplayMemory<E: Environment> {
     memory: RingBuffer<Exp<E>>,
     pub batch_size: usize,

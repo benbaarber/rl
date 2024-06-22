@@ -6,9 +6,9 @@ use crate::{env::Environment, memory::Exp, prob::ProbModel};
 /// Thompson sampling exploration policy (also known as probability matching)
 ///
 /// ### Type parameters
-/// - `E`: Environment
-/// - `M`: The type of probabilistic model to model the reward for each action with
-/// - `A`: The size of the action space
+/// - `E` - Environment
+/// - `M` - The type of probabilistic model to model the reward for each action with
+/// - `A` - The size of the action space
 pub struct Thompson<E, M, const A: usize>
 where
     E: Environment,

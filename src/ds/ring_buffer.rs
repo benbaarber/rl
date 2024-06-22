@@ -62,38 +62,6 @@ impl<T: Clone> Index<usize> for RingBuffer<T> {
     }
 }
 
-/// A fixed-size ring buffer with capacity known at compile time
-pub struct StaticRingBuffer<T, const CAP: usize> {
-    buffer: [T; CAP],
-    i: usize,
-}
-
-impl<T, const CAP: usize> StaticRingBuffer<T, CAP> {
-    /// Constructs a new `StaticRingBuffer` from a provided array
-    pub fn from(data: [T; CAP]) -> Self {
-        Self { buffer: data, i: 0 }
-    }
-
-    /// Insert an element into the buffer, overwriting the oldest element
-    pub fn push(&mut self, item: T) {
-        self.buffer[self.i] = item;
-        self.i = (self.i + 1) % CAP;
-    }
-
-    /// Get a slice view of the internal buffer
-    pub fn view(&self) -> &[T; CAP] {
-        &self.buffer
-    }
-}
-
-impl<T: Clone, const CAP: usize> Index<usize> for StaticRingBuffer<T, CAP> {
-    type Output = T;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.buffer[index]
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

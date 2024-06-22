@@ -18,7 +18,7 @@ pub trait Environment {
     /// This should be a relatively simple data type
     ///
     /// ### Trait bounds
-    /// - `Clone`: When sampling batches of experiences, cloning is necessary
+    /// - `Clone` - When sampling batches of experiences, cloning is necessary
     type State: Clone + Debug;
 
     /// A representation of an action that an agent can take to affect the environment
@@ -26,7 +26,7 @@ pub trait Environment {
     /// This should be a relatively simple data type
     ///
     /// ### Trait bounds
-    /// - `Clone`: When sampling batches of experiences, cloning is necessary
+    /// - `Clone` - When sampling batches of experiences, cloning is necessary
     type Action: Clone + Debug;
 
     /// Update the environment in response to a an action taken by an agent, producing a new state and associated reward

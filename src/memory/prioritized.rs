@@ -1,6 +1,6 @@
 use rand::{
     distributions::{Distribution, Uniform},
-    thread_rng, Rng,
+    thread_rng,
 };
 
 use crate::{
@@ -14,16 +14,34 @@ use super::{Exp, ExpBatch};
 /// A prioritized replay memory, as described in [this paper](https://arxiv.org/abs/1511.05952)
 ///
 /// An improvement over the base replay memory, this implementation prioritizes "surprising" or "valuable" experiences,
-/// where the amount of surprise is approximated by the temporal difference error
+/// where the amount of surprise is approximated by the temporal difference error.
+///
+/// ### Hyperparameters
+/// - `alpha` - the prioritization exponent, which affects degree of prioritization used in the stochastic sampling of experiences
+///   - A value of `0.0` means no prioritization, as it makes all priorities have a value of 1, yielding a uniform distribution
+///   - Higher values mean higher prioritization, and `1.0` is a sensible maximum here, though higher values can be used
+/// - `beta_0` - the initial value for beta, the importance sampling exponent, which is annealed from β<sub>0</sub> to 1 to apply
+///   IS weights to the temporal difference errors
 pub struct PrioritizedReplayMemory<E: Environment> {
     memory: RingBuffer<Exp<E>>,
     priorities: SumTree,
-    batch_size: usize,
     alpha: f32,
     beta: decay::Linear,
+    pub batch_size: usize,
 }
 
 impl<E: Environment> PrioritizedReplayMemory<E> {
+    /// Initialize a `PrioritizedReplayMemory`
+    ///
+    /// ### Arguments
+    /// - `capacity` - the number of experiences the replay memory can hold before overwriting the oldest ones
+    /// - `batch_size` - the number of experiences in a sampled batch
+    /// - `alpha` - the prioritization exponent
+    ///   - A sensible default is `0.7`
+    /// - `beta_0` - the initial value for beta, the importance sampling exponent
+    ///   - A sensible default is `0.5`
+    /// - `num_episodes` - the number of episodes the associated agent will train for
+    ///   - Needed to set up annealing of the beta hyperparameter
     pub fn new(
         capacity: usize,
         batch_size: usize,
@@ -34,11 +52,12 @@ impl<E: Environment> PrioritizedReplayMemory<E> {
         Self {
             memory: RingBuffer::new(capacity),
             priorities: SumTree::new(capacity),
-            batch_size,
             alpha,
-            beta: decay::Linear::new((1.0 - beta_0) / num_episodes as f32, beta_0, 1.0).unwrap(),
+            beta: decay::Linear::new((beta_0 - 1.0) / num_episodes as f32, beta_0, 1.0).unwrap(),
+            batch_size,
         }
     }
+
     /// Add a new experience to the memory
     pub fn push(&mut self, exp: Exp<E>) {
         let ix = self.memory.push(exp);
@@ -58,23 +77,27 @@ impl<E: Environment> PrioritizedReplayMemory<E> {
 
     /// Sample a random batch of prioritized experiences from the memory and compute the IS weights for each
     ///
+    /// ### Arguments
+    /// - `episode` - the current episode, used to calculate the current beta value
+    ///
     /// ### Returns
     /// - `None` if there are less experiences stored than can fill a batch
     /// - `Some((batch, weights, indices))` otherwise
-    ///   - `batch`: the sampled experiences
-    ///   - `weights`: the importance sampling weights
-    ///   - `indices`: the indices of the sampled experiences - hold on to this and pass it back to the
+    ///   - `batch` - the sampled experiences
+    ///   - `weights` - the importance sampling weights
+    ///   - `indices` - the indices of the sampled experiences - hold on to this and pass it back to the
     ///     [`update_priorities`](PrioritizedReplayMemory::update_priorities) function along with the computed
     ///     TD errors
     pub fn sample(&self, episode: usize) -> Option<(Vec<Exp<E>>, Vec<f32>, Vec<usize>)> {
-        if self.batch_size > self.memory.len() {
+        // TODO: come back to this
+        if self.memory.len() < self.memory.capacity() {
             return None;
         }
 
         let total_priority = self.priorities.sum();
 
         let mut rng = thread_rng();
-        let dist = Uniform::new(0.0, total_priority);
+        let dist = Uniform::new(0.0, f32::max(total_priority, 0.1));
 
         let mut batch = Vec::with_capacity(self.batch_size);
         let mut probs = Vec::with_capacity(self.batch_size);
@@ -96,12 +119,15 @@ impl<E: Environment> PrioritizedReplayMemory<E> {
     /// zip the vector of tuples into a tuple of vectors,
     /// and compute the IS weights for each
     ///
+    /// ### Arguments
+    /// - `episode` - the current episode, used to calculate the current beta value
+    ///
     /// ### Returns
     /// - `None` if there are less experiences stored than can fill a batch
     /// - `Some((batch, weights, indices))` otherwise
-    ///   - `batch`: the sampled experiences
-    ///   - `weights`: the importance sampling weights
-    ///   - `indices`: the indices of the sampled experiences - hold on to this and pass it back to the
+    ///   - `batch` - the sampled experiences
+    ///   - `weights` - the importance sampling weights
+    ///   - `indices` - the indices of the sampled experiences - hold on to this and pass it back to the
     ///     [`update_priorities`](PrioritizedReplayMemory::update_priorities) function along with the computed
     ///     TD errors
     pub fn sample_zipped(&self, episode: usize) -> Option<(ExpBatch<E>, Vec<f32>, Vec<usize>)> {
@@ -110,9 +136,13 @@ impl<E: Environment> PrioritizedReplayMemory<E> {
         Some((batch, weights, indices))
     }
 
-    /// Update the priorities of the sampled experiences
+    /// Update the priorities of the sampled experiences after computing their temporal difference errors
     ///
     /// **Panics** if `indices` and `td_errors` do not have the same length
+    ///
+    /// ### Arguments
+    /// - `indices` - the list of indices to update, returned from calling one of the sample methods
+    /// - `td_errors` - the computed temporal difference errors which the new priorities are derived from
     pub fn update_priorities(&mut self, indices: &[usize], td_errors: &[f32]) {
         assert_eq!(
             indices.len(),
@@ -121,7 +151,7 @@ impl<E: Environment> PrioritizedReplayMemory<E> {
         );
 
         for (ix, tde) in indices.iter().zip(td_errors.iter()) {
-            self.priorities.update(*ix, tde.abs().powf(self.alpha))
+            self.priorities.update(*ix, tde.powf(self.alpha))
         }
     }
 }

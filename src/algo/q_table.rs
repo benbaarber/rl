@@ -27,7 +27,7 @@ impl Default for QTableAgentConfig {
 /// A simple Q-learning agent that utilizes a Q-table to learn its environment
 ///
 /// ### Generics
-/// - `E`: The [`Environment`] in which the agent will learn
+/// - `E` - The [`Environment`] in which the agent will learn
 ///     - The environment's state and action spaces must both be discrete because a Q value will be recorded for each state action pair
 ///     - For the same reason, the state and action types must be `Copy`, `Eq`, and `Hash` to be used as keys in a [`HashMap`]
 pub struct QTableAgent<E>
@@ -52,9 +52,9 @@ where
     /// Initialize a new `QAgent` in a given environment
     ///
     /// ### Parameters
-    /// - `alpha`: The learning rate - must be between 0 and 1
-    /// - `gamma`: The discount factor - must be between 0 and 1
-    /// - `exploration`: A customized [EpsilonGreedy] policy
+    /// - `alpha` - The learning rate - must be between 0 and 1
+    /// - `gamma` - The discount factor - must be between 0 and 1
+    /// - `exploration` - A customized [EpsilonGreedy] policy
     ///
     /// **Panics** if `alpha` or `gamma` is not in the interval `[0,1]`
     pub fn new(config: QTableAgentConfig) -> Self {
