@@ -33,7 +33,7 @@ impl SumTree {
         }
     }
 
-    /// Find the first index `i` and value `v` where the sum of the values from 0 to `i` is greater than `value`
+    /// Find the first index `i` and value `v` at that index where the sum of the values from 0 to `i` is greater than `value`
     pub fn find(&self, value: f32) -> (usize, f32) {
         let mut ix = 0;
         let mut val = value;
@@ -48,8 +48,9 @@ impl SumTree {
             }
         }
 
+        let val = self.tree[ix];
         let ix = ix - (self.capacity - 1);
-        (ix, self.tree[ix])
+        (ix, val)
     }
 
     /// Get the sum of all values stored

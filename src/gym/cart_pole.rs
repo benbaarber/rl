@@ -6,7 +6,8 @@ use rand::seq::IteratorRandom;
 use rand::thread_rng;
 use strum::{EnumIter, FromRepr, IntoEnumIterator, VariantArray};
 
-use crate::env::{DiscreteActionSpace, Environment, Report, ToTensor};
+use crate::env::{DiscreteActionSpace, Environment, Report};
+use crate::traits::ToTensor;
 
 fn obs2arr(observation: CartPoleObservation) -> [f32; 4] {
     Vec::from(observation)
@@ -38,17 +39,6 @@ impl<B: Backend<IntElem = i32>> ToTensor<B, 2, Int> for Vec<CPAction> {
             [len].into(),
         );
         Tensor::from_data(data, device).unsqueeze_dim(1)
-    }
-}
-
-impl<B: Backend<FloatElem = f32>> ToTensor<B, 2, Float> for Vec<[f32; 4]> {
-    fn to_tensor(self, device: &B::Device) -> Tensor<B, 2, Float> {
-        let len = self.len();
-        let data = Data::new(
-            self.into_iter().flatten().collect::<Vec<_>>(),
-            [len * 4].into(),
-        );
-        Tensor::from_data(data, device).reshape([-1, 4])
     }
 }
 

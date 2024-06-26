@@ -16,6 +16,9 @@ pub mod exploration;
 /// Experience replay
 pub mod memory;
 
+/// Library traits
+pub mod traits;
+
 /// Probabilistic models
 mod prob;
 

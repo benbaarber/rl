@@ -1,4 +1,5 @@
 use burn::{
+    grad_clipping::GradientClippingConfig,
     module::AutodiffModule,
     optim::{AdamWConfig, GradientsParams, Optimizer},
     prelude::*,
@@ -8,9 +9,10 @@ use nn::loss::{MseLoss, Reduction};
 
 use crate::{
     decay,
-    env::{Environment, ToTensor},
+    env::Environment,
     exploration::{Choice, EpsilonGreedy},
     memory::{Exp, Memory, PrioritizedReplayMemory, ReplayMemory},
+    traits::ToTensor,
 };
 
 /// A burn module used with a Deep Q network agent
@@ -36,7 +38,7 @@ pub trait DQNModel<B: AutodiffBackend, const D: usize>: AutodiffModule<B> {
 pub struct DQNAgentConfig {
     /// The capacity of the replay memory
     ///
-    /// **Default:** `32768`
+    /// **Default:** `65536`
     pub memory_capacity: usize,
     /// The size of batches to be sampled from the replay memory
     ///
@@ -94,7 +96,7 @@ pub struct DQNAgentConfig {
 impl Default for DQNAgentConfig {
     fn default() -> Self {
         Self {
-            memory_capacity: 32768,
+            memory_capacity: 65536,
             memory_batch_size: 128,
             use_prioritized_memory: false,
             num_episodes: 500,
@@ -353,7 +355,9 @@ where
 
     /// Deploy the `DQNAgent` into the environment for one episode
     pub fn go(&mut self, env: &mut E) {
-        let mut optimizer = AdamWConfig::new().init();
+        let mut optimizer = AdamWConfig::new()
+            .with_grad_clipping(Some(GradientClippingConfig::Value(100.0)))
+            .init();
         let mut next_state = Some(env.reset());
 
         while let Some(state) = next_state {
@@ -381,5 +385,7 @@ where
 
             self.total_steps += 1;
         }
+
+        self.episodes_elapsed += 1;
     }
 }

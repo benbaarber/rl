@@ -19,4 +19,4 @@ Currently, **rl** is in its early stages. Contributors are more than welcome!
  - A comfortable learning experience for those new to RL
  - General RL peripherals and utility functions
 
-![image](https://github.com/benbaarber/rl/assets/6320364/d0c545bb-a5f4-4487-8e33-1a02a3fb4577)
+![TUI example](https://github.com/benbaarber/rl/assets/6320364/d0c545bb-a5f4-4487-8e33-1a02a3fb4577)
