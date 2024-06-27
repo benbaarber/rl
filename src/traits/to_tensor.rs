@@ -69,8 +69,29 @@ where
     }
 }
 
-// #[test]
-// fn test() {
-//     let b = vec![[1,2,3], [4,5,6]];
-//     let a = vec![[1,2,3], [4,5,6]].to_tensor(Default::default());
-// }
+#[cfg(test)]
+mod tests {
+    use burn::backend::{ndarray::NdArrayDevice, NdArray as B};
+
+    use super::*;
+
+    #[test]
+    fn vec_impl() {
+        let device = NdArrayDevice::Cpu;
+        let x = vec![1f32, 2.0, 3.0];
+        let t1: Tensor<B, 1> = x.to_tensor(&device);
+
+        let t2: Tensor<B, 1> = [1f32, 2.0, 3.0].to_tensor(&device);
+        assert!(t1.equal(t2).all().into_scalar(), "valid tensor constructed from `Vec<E>`");
+    }
+
+    #[test]
+    fn vec_arr_impl() {
+        let device = NdArrayDevice::Cpu;
+        let x = vec![[1f32, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        let t1: Tensor<B, 2> = x.to_tensor(&device);
+
+        let t2: Tensor<B, 2> = [[1f32, 2.0, 3.0], [4.0, 5.0, 6.0]].to_tensor(&device);
+        assert!(t1.equal(t2).all().into_scalar(), "valid tensor constructed from `Vec<[E; A]>`");
+    }
+}

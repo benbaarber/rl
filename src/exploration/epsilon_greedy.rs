@@ -25,3 +25,17 @@ impl<D: Decay> EpsilonGreedy<D> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::decay;
+
+    use super::*;
+
+    #[test]
+    fn epsilon_greedy_functional() {
+        let exploration = EpsilonGreedy::new(decay::Exponential::new(0.001, 1.0, 0.05).unwrap());
+
+        exploration.choose(12);
+    }
+}

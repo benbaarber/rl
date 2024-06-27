@@ -55,7 +55,7 @@ impl CartPole {
     pub fn new(render_mode: RenderMode) -> Self {
         Self {
             gym_env: CartPoleEnv::new(render_mode),
-            report: Report::new(vec!["reward", "loss"]),
+            report: Report::new(vec!["reward"]),
         }
     }
 }
@@ -95,5 +95,17 @@ impl Environment for CartPole {
 impl DiscreteActionSpace for CartPole {
     fn actions(&self) -> Vec<Self::Action> {
         CPAction::VARIANTS.to_vec()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn obs2arr_functional() {
+        let obs = CartPoleObservation::new(0.0.into(), 1.0.into(), 2.0.into(), 3.0.into());
+        let arr = obs2arr(obs);
+        assert_eq!(arr, [0.0, 1.0, 2.0. 3.0], "obs2arr conversion works");
     }
 }
