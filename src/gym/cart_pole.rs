@@ -106,6 +106,6 @@ mod tests {
     fn obs2arr_functional() {
         let obs = CartPoleObservation::new(0.0.into(), 1.0.into(), 2.0.into(), 3.0.into());
         let arr = obs2arr(obs);
-        assert_eq!(arr, [0.0, 1.0, 2.0. 3.0], "obs2arr conversion works");
+        assert_eq!(arr, [0.0, 1.0, 2.0, 3.0], "obs2arr conversion works");
     }
 }
