@@ -14,15 +14,13 @@ type DQNBackend = Autodiff<Wgpu>;
 
 static DEVICE: Lazy<WgpuDevice> = Lazy::new(WgpuDevice::default);
 
-const NUM_EPISODES: u16 = 128;
+const NUM_EPISODES: u16 = 256;
 
 fn main() {
     let mut env = CartPole::new(RenderMode::Human);
 
     let model = ModelConfig::new(64, 128).init::<DQNBackend>(&*DEVICE);
-    let agent_config = DQNAgentConfig {
-        ..Default::default()
-    };
+    let agent_config = DQNAgentConfig::default();
     let mut agent = DQNAgent::new(model, agent_config, &*DEVICE);
 
     let (handle, tx) = viz::init(env.report.keys(), NUM_EPISODES);

@@ -73,24 +73,13 @@ impl<E: Environment> ReplayMemory<E> {
 
 #[cfg(test)]
 mod tests {
-    use crate::env::tests::MockEnv;
+    use crate::memory::tests::create_mock_exp_vec;
 
     use super::*;
 
-    fn create_mock_exp_vec() -> Vec<Exp<MockEnv>> {
-        (0..4)
-            .map(|i| Exp {
-                state: i,
-                action: i + 1,
-                next_state: Some(i + 1),
-                reward: 1.0,
-            })
-            .collect()
-    }
-
     #[test]
     fn replay_memory_functional() {
-        let experiences = create_mock_exp_vec();
+        let experiences = create_mock_exp_vec(4);
         let mut memory = ReplayMemory::new(4, 2);
 
         assert!(

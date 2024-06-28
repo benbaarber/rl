@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use crate::env::Environment;
 
 /// Represents a single experience or transition in the environment
@@ -20,6 +22,17 @@ impl<E: Environment> Clone for Exp<E> {
             reward: self.reward,
             next_state: self.next_state.clone(),
         }
+    }
+}
+
+impl<E: Environment> Debug for Exp<E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Exp")
+            .field("state", &self.state)
+            .field("action", &self.action)
+            .field("reward", &self.reward)
+            .field("next_state", &self.next_state)
+            .finish()
     }
 }
 
@@ -57,7 +70,7 @@ impl<E: Environment> ExpBatch<E> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use crate::env::tests::MockEnv;
 
     use super::*;
@@ -78,6 +91,17 @@ mod tests {
             next_state: None,
         };
         [exp1, exp2]
+    }
+
+    pub(crate) fn create_mock_exp_vec(n: i32) -> Vec<Exp<MockEnv>> {
+        (0..n)
+            .map(|i| Exp {
+                state: i,
+                action: i + 1,
+                next_state: Some(i + 1),
+                reward: 1.0,
+            })
+            .collect()
     }
 
     #[test]

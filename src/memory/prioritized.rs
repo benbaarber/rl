@@ -61,7 +61,7 @@ impl<E: Environment> PrioritizedReplayMemory<E> {
     /// Add a new experience to the memory
     pub fn push(&mut self, exp: Exp<E>) {
         let ix = self.memory.push(exp);
-        let max_priority = self.priorities.max();
+        let max_priority = f32::max(self.priorities.max(), 1e-5);
         self.priorities.update(ix, max_priority);
     }
 
@@ -89,22 +89,23 @@ impl<E: Environment> PrioritizedReplayMemory<E> {
     ///     [`update_priorities`](PrioritizedReplayMemory::update_priorities) function along with the computed
     ///     TD errors
     pub fn sample(&self, episode: usize) -> Option<(Vec<Exp<E>>, Vec<f32>, Vec<usize>)> {
-        // TODO: come back to this
-        if self.memory.len() < self.memory.capacity() {
+        if self.batch_size > self.memory.len() {
             return None;
         }
 
         let total_priority = self.priorities.sum();
 
         let mut rng = thread_rng();
-        let dist = Uniform::new(0.0, f32::max(total_priority, 0.1));
+        let dist = Uniform::new(0.0, total_priority);
 
         let mut batch = Vec::with_capacity(self.batch_size);
         let mut probs = Vec::with_capacity(self.batch_size);
         let mut indices = Vec::with_capacity(self.batch_size);
         for _ in 0..self.batch_size {
             let priority = dist.sample(&mut rng);
-            let (ix, val) = self.priorities.find(priority);
+            let ix = self.priorities.find(priority).min(self.memory.len() - 1);
+            let val = self.priorities[ix];
+
             batch.push(self.memory[ix].clone());
             probs.push(val / total_priority);
             indices.push(ix);
@@ -147,11 +148,68 @@ impl<E: Environment> PrioritizedReplayMemory<E> {
         assert_eq!(
             indices.len(),
             td_errors.len(),
-            "`incides` and `td_errors` are the same length"
+            "`indices` and `td_errors` are the same length"
         );
 
         for (ix, tde) in indices.iter().zip(td_errors.iter()) {
-            self.priorities.update(*ix, tde.powf(self.alpha))
+            self.priorities.update(*ix, tde.abs().powf(self.alpha))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::memory::tests::create_mock_exp_vec;
+
+    use super::*;
+
+    #[test]
+    fn prioritized_replay_memory_functional() {
+        let experiences = create_mock_exp_vec(8);
+        let mut memory = PrioritizedReplayMemory::new(8, 4, 1.0, 0.5, 16);
+
+        assert!(
+            memory.sample(0).is_none(),
+            "sample none when too few experiences"
+        );
+        assert!(
+            memory.sample_zipped(0).is_none(),
+            "sample_zipped none when too few experiences"
+        );
+
+        for exp in experiences {
+            memory.push(exp);
+        }
+
+        assert_eq!(
+            memory.priorities.max(),
+            1e-5,
+            "max priority is minimum value before updates"
+        );
+        assert_eq!(
+            memory.priorities.sum(),
+            8e-5,
+            "sum is correct after pushing elements"
+        );
+
+        let (batch, weights, indices) = memory
+            .sample(0)
+            .expect("sample some when enough experiences");
+
+        assert_eq!(batch.len(), 4, "batch length correct");
+        assert_eq!(weights.len(), 4, "weights length correct");
+        assert_eq!(indices.len(), 4, "indices length correct");
+
+        memory.update_priorities(&indices, &[0.1, 0.2, 0.3, 0.4]);
+
+        assert_eq!(
+            memory.priorities.max(),
+            0.4,
+            "max priority is correct after updates"
+        );
+        assert!(
+            memory.priorities.sum() > 0.4,
+            "sum is correct after updates"
+        );
     }
 }

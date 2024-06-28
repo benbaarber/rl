@@ -82,7 +82,10 @@ mod tests {
         let t1: Tensor<B, 1> = x.to_tensor(&device);
 
         let t2: Tensor<B, 1> = [1f32, 2.0, 3.0].to_tensor(&device);
-        assert!(t1.equal(t2).all().into_scalar(), "valid tensor constructed from `Vec<E>`");
+        assert!(
+            t1.equal(t2).all().into_scalar(),
+            "valid tensor constructed from `Vec<E>`"
+        );
     }
 
     #[test]
@@ -92,6 +95,9 @@ mod tests {
         let t1: Tensor<B, 2> = x.to_tensor(&device);
 
         let t2: Tensor<B, 2> = [[1f32, 2.0, 3.0], [4.0, 5.0, 6.0]].to_tensor(&device);
-        assert!(t1.equal(t2).all().into_scalar(), "valid tensor constructed from `Vec<[E; A]>`");
+        assert!(
+            t1.equal(t2).all().into_scalar(),
+            "valid tensor constructed from `Vec<[E; A]>`"
+        );
     }
 }

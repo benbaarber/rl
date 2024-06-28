@@ -38,7 +38,7 @@ pub trait DQNModel<B: AutodiffBackend, const D: usize>: AutodiffModule<B> {
 pub struct DQNAgentConfig {
     /// The capacity of the replay memory
     ///
-    /// **Default:** `65536`
+    /// **Default:** `16384`
     pub memory_capacity: usize,
     /// The size of batches to be sampled from the replay memory
     ///
@@ -73,6 +73,10 @@ pub struct DQNAgentConfig {
     ///
     /// **Default:** [`EpsilonGreedy`] with [`Exponential`](decay::Exponential) decay with decay rate `1e-3`, start value `1.0`, and end value `0.05`
     pub exploration: EpsilonGreedy<decay::Exponential>,
+    /// Gradient clipping
+    ///
+    /// **Default:** `Some(GradientClippingConfig::Value(100.0))`
+    pub grad_clipping: Option<GradientClippingConfig>,
     /// The discount factor
     ///
     /// **Default:** `0.999`
@@ -96,7 +100,7 @@ pub struct DQNAgentConfig {
 impl Default for DQNAgentConfig {
     fn default() -> Self {
         Self {
-            memory_capacity: 65536,
+            memory_capacity: 16384,
             memory_batch_size: 128,
             use_prioritized_memory: false,
             num_episodes: 500,
@@ -104,6 +108,7 @@ impl Default for DQNAgentConfig {
             prioritized_memory_beta_0: 0.5,
             // optimizer: AdamWConfig::new().init(),
             exploration: EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.05).unwrap()),
+            grad_clipping: Some(GradientClippingConfig::Value(100.0)),
             gamma: 0.999,
             target_update_interval: 1,
             tau: 5e-3,
@@ -123,7 +128,7 @@ impl Default for DQNAgentConfig {
 ///       Ideally, both types are [`Copy`].
 /// - `D` - The dimension of the input
 ///
-/// A generic optimizer will be added when burn v0.14.0 releases, until then the [`AdamW`] optimizer will be used
+/// A generic optimizer will be added when burn v0.14.0 releases, until then the [`AdamW`](burn::optim::AdamW) optimizer will be used
 pub struct DQNAgent<B, M, E, const D: usize>
 where
     B: AutodiffBackend,
@@ -135,6 +140,7 @@ where
     memory: Memory<E>,
     // optimizer: O,
     exploration: EpsilonGreedy<decay::Exponential>,
+    grad_clipping: Option<GradientClippingConfig>,
     gamma: f32,
     target_update_interval: usize,
     tau: f32,
@@ -183,6 +189,7 @@ where
             memory,
             // optimizer: config.optimizer,
             exploration: config.exploration,
+            grad_clipping: config.grad_clipping,
             gamma: config.gamma,
             target_update_interval: config.target_update_interval,
             tau: config.tau,
@@ -222,32 +229,24 @@ where
         let batch_size = memory.batch_size;
 
         // Create a boolean mask for non-terminal next states so tensor shapes can match in the Bellman Equation
-        let non_terminal_mask = Tensor::<B, 1, Bool>::from_bool(
-            batch
-                .next_states
-                .iter()
-                .map(Option::is_some)
-                .collect::<Vec<_>>()
-                .as_slice()
-                .into(),
-            self.device,
-        )
-        .unsqueeze_dim(1);
+        let non_terminal_mask = batch
+            .next_states
+            .iter()
+            .map(Option::is_some)
+            .collect::<Vec<_>>()
+            .to_tensor(self.device)
+            .unsqueeze_dim(1);
 
         // Tensor conversions
         let states = batch.states.to_tensor(self.device);
         let actions = batch.actions.to_tensor(self.device);
-        let next_states = Tensor::<B, D>::cat(
-            batch
-                .next_states
-                .into_iter()
-                .flatten()
-                .map(|ns| vec![ns].to_tensor(self.device)) // finish
-                .collect::<Vec<_>>(),
-            0,
-        );
-        let rewards: Tensor<B, 2> =
-            Tensor::from_floats(batch.rewards.as_slice(), self.device).unsqueeze_dim(1);
+        let next_states = batch
+            .next_states
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .to_tensor(self.device);
+        let rewards = batch.rewards.to_tensor(self.device).unsqueeze_dim(1);
 
         let policy_net = self.policy_net.take().unwrap();
         let target_net = self.target_net.take().unwrap();
@@ -256,7 +255,7 @@ where
         let q_values = policy_net.forward(states).gather(1, actions);
 
         // Compute the maximum Q values obtainable from each next state
-        let expected_q_values = Tensor::<B, 2>::zeros([batch_size, 1], self.device).mask_where(
+        let expected_q_values = Tensor::zeros([batch_size, 1], self.device).mask_where(
             non_terminal_mask,
             target_net.forward(next_states).max_dim(1).detach(),
         );
@@ -289,32 +288,24 @@ where
         let batch_size = memory.batch_size;
 
         // Create a boolean mask for non-terminal next states so tensor shapes can match in the Bellman Equation
-        let non_terminal_mask = Tensor::<B, 1, Bool>::from_bool(
-            batch
-                .next_states
-                .iter()
-                .map(Option::is_some)
-                .collect::<Vec<_>>()
-                .as_slice()
-                .into(),
-            self.device,
-        )
-        .unsqueeze_dim(1);
+        let non_terminal_mask = batch
+            .next_states
+            .iter()
+            .map(Option::is_some)
+            .collect::<Vec<_>>()
+            .to_tensor(self.device)
+            .unsqueeze_dim(1);
 
         // Tensor conversions
         let states = batch.states.to_tensor(self.device);
         let actions = batch.actions.to_tensor(self.device);
-        let next_states = Tensor::<B, D>::cat(
-            batch
-                .next_states
-                .into_iter()
-                .flatten()
-                .map(|ns| vec![ns].to_tensor(self.device)) // finish
-                .collect::<Vec<_>>(),
-            0,
-        );
-        let rewards: Tensor<B, 2> =
-            Tensor::from_floats(batch.rewards.as_slice(), self.device).unsqueeze_dim(1);
+        let next_states = batch
+            .next_states
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .to_tensor(self.device);
+        let rewards = batch.rewards.to_tensor(self.device).unsqueeze_dim(1);
 
         let policy_net = self.policy_net.take().unwrap();
         let target_net = self.target_net.take().unwrap();
@@ -323,7 +314,7 @@ where
         let q_values = policy_net.forward(states).gather(1, actions);
 
         // Compute the maximum Q values obtainable from each next state
-        let expected_q_values = Tensor::<B, 2>::zeros([batch_size, 1], self.device).mask_where(
+        let expected_q_values = Tensor::zeros([batch_size, 1], self.device).mask_where(
             non_terminal_mask,
             target_net.forward(next_states).max_dim(1).detach(),
         );
@@ -334,11 +325,11 @@ where
         let tde: Tensor<B, 1> = (discounted_expected_return - q_values).squeeze(1);
 
         // Update priorities of sampled experiences
-        let abs_td_errors = tde.clone().abs().into_data().value;
-        memory.update_priorities(&indices, &abs_td_errors);
+        let td_errors = tde.to_data().value;
+        memory.update_priorities(&indices, &td_errors);
 
         // Apply importance sampling weights from prioritized memory replay and compute mean squared weighted TD error
-        let weights = Tensor::<B, 1>::from_floats(weights.as_slice(), self.device);
+        let weights = weights.to_tensor(self.device);
         let loss = (weights * tde.powf_scalar(2.0)).mean();
 
         // Perform backpropagation on policy net
@@ -356,7 +347,7 @@ where
     /// Deploy the `DQNAgent` into the environment for one episode
     pub fn go(&mut self, env: &mut E) {
         let mut optimizer = AdamWConfig::new()
-            .with_grad_clipping(Some(GradientClippingConfig::Value(100.0)))
+            .with_grad_clipping(self.grad_clipping.clone())
             .init();
         let mut next_state = Some(env.reset());
 

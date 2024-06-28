@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 /// A binary tree data structure where each parent node is the sum of its child nodes
 pub struct SumTree {
     tree: Vec<f32>,
@@ -33,8 +35,8 @@ impl SumTree {
         }
     }
 
-    /// Find the first index `i` and value `v` at that index where the sum of the values from 0 to `i` is greater than `value`
-    pub fn find(&self, value: f32) -> (usize, f32) {
+    /// Find the first index `i` where the sum of the values from 0 to `i` is greater than `value`
+    pub fn find(&self, value: f32) -> usize {
         let mut ix = 0;
         let mut val = value;
         while ix < self.capacity - 1 {
@@ -48,9 +50,7 @@ impl SumTree {
             }
         }
 
-        let val = self.tree[ix];
-        let ix = ix - (self.capacity - 1);
-        (ix, val)
+        ix - (self.capacity - 1)
     }
 
     /// Get the sum of all values stored
@@ -61,6 +61,14 @@ impl SumTree {
     /// Get the max of all values stored
     pub fn max(&self) -> f32 {
         self.max
+    }
+}
+
+impl Index<usize> for SumTree {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.tree[index + self.capacity - 1]
     }
 }
 
@@ -81,14 +89,13 @@ mod tests {
             sumtree.update(i, i as f32);
         }
 
-        assert_eq!(
-            sumtree.tree[0], 28.0,
-            "root node contains sum of entire tree"
-        );
-        assert_eq!(sumtree.find(4.0), (3, 3.0), "find works on left side");
-        assert_eq!(sumtree.find(18.0), (6, 6.0), "find works on right side");
+        assert_eq!(sumtree.sum(), 28.0, "root node contains sum of entire tree");
+        assert_eq!(sumtree.find(4.0), 3, "find works on left side");
+        assert_eq!(sumtree.find(18.0), 6, "find works on right side");
 
         sumtree.update(3, 12.0);
         assert_eq!(sumtree.max(), 12.0, "maximum value stored correctly");
+
+        assert_eq!(sumtree[3], 12.0, "sumtree can be indexed");
     }
 }
