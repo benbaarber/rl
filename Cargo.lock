@@ -2511,6 +2511,7 @@ dependencies = [
  "log",
  "once_cell",
  "rand",
+ "rand_distr",
  "ratatui 0.26.3",
  "strum 0.26.3",
  "tui-logger",
