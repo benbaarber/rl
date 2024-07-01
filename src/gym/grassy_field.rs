@@ -237,7 +237,7 @@ mod tests {
         assert_ne!(env.food, (2, 1), "Food was moved after being eaten");
 
         let report = env.report.take();
-        assert_eq!(*report.get("score").unwrap(), 1.0, "Report score correct");
-        assert_eq!(*report.get("steps").unwrap(), 5.0, "Report steps correct");
+        assert_eq!(report["score"], 1.0, "Report score correct");
+        assert_eq!(report["steps"], 5.0, "Report steps correct");
     }
 }

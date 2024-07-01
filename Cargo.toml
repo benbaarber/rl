@@ -29,6 +29,7 @@ unicode-width = { version = "0.1.13", optional = true }
 burn = { version = "0.13.2", features = ["wgpu", "ndarray"] }
 gix-fs = "0.11.0"
 once_cell = "1.19.0"
+plotters = "0.3.6"
 
 [[example]]
 name = "q_table_frozen_lake"
@@ -41,3 +42,7 @@ required-features = ["gym", "viz"]
 [[example]]
 name = "dqn_cartpole"
 required-features = ["gym", "viz"]
+
+[[example]]
+name = "ten_armed_testbed"
+required-features = ["gym"]

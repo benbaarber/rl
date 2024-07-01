@@ -30,7 +30,7 @@ fn main() {
         let report = env.report.take();
         tx.send(viz::Update {
             episode: i,
-            data: report.values().cloned().collect(),
+            data: report.values().copied().collect(),
         })
         .unwrap();
     }

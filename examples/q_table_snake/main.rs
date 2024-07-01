@@ -1,5 +1,5 @@
 use rl::{
-    algo::q_table::{QTableAgent, QTableAgentConfig},
+    algo::tabular::q_table::{QTableAgent, QTableAgentConfig},
     gym::GrassyField,
     viz,
 };

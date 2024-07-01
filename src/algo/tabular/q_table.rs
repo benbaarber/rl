@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use crate::{
     assert_interval, decay,
@@ -6,6 +6,8 @@ use crate::{
     exploration::{Choice, EpsilonGreedy},
     memory::Exp,
 };
+
+use super::Hashable;
 
 /// Configuration for the [`QTableAgent`]
 pub struct QTableAgentConfig {
@@ -33,8 +35,8 @@ impl Default for QTableAgentConfig {
 pub struct QTableAgent<E>
 where
     E: Environment + DiscreteActionSpace,
-    E::State: Copy + Eq + Hash,
-    E::Action: Copy + Eq + Hash,
+    E::State: Hashable,
+    E::Action: Hashable,
 {
     q_table: HashMap<(E::State, E::Action), f32>,
     exploration: EpsilonGreedy<decay::Exponential>,
@@ -46,8 +48,8 @@ where
 impl<E> QTableAgent<E>
 where
     E: Environment + DiscreteActionSpace,
-    E::State: Copy + Eq + Hash,
-    E::Action: Copy + Eq + Hash,
+    E::State: Hashable,
+    E::Action: Hashable,
 {
     /// Initialize a new `QAgent` in a given environment
     ///
@@ -69,17 +71,12 @@ where
         }
     }
 
+    /// Get the Q-table
     pub fn get_q_table(&self) -> &HashMap<(E::State, E::Action), f32> {
         &self.q_table
     }
-}
 
-impl<E> QTableAgent<E>
-where
-    E: Environment + DiscreteActionSpace,
-    E::State: Copy + Eq + Hash,
-    E::Action: Copy + Eq + Hash,
-{
+    /// Choose an action based on the current state and exploration policy
     fn act(&self, env: &E, state: E::State, actions: &[E::Action]) -> E::Action {
         match self.exploration.choose(self.episode) {
             Choice::Explore => env.random_action(),
@@ -94,6 +91,7 @@ where
         }
     }
 
+    /// Learn from a given experience and update the Q-table
     fn learn(&mut self, experience: Exp<E>, next_actions: &[E::Action]) {
         let Exp {
             state,
@@ -118,6 +116,7 @@ where
         self.q_table.insert((state, action), weighted_q_value);
     }
 
+    /// Run the agent in the given environment
     pub fn go(&mut self, env: &mut E) {
         let mut next_state = Some(env.reset());
         let mut actions = env.actions();

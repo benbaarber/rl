@@ -1,5 +1,5 @@
 use rl::{
-    algo::q_table::{QTableAgent, QTableAgentConfig},
+    algo::tabular::q_table::{QTableAgent, QTableAgentConfig},
     decay,
     exploration::EpsilonGreedy,
     gym::FrozenLake,
