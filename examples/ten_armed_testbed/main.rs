@@ -72,7 +72,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         .y_label_area_size(40)
         .build_cartesian_2d(0..1000, 0.0..2.0)?;
 
-    chart.configure_mesh().draw()?;
+    chart
+        .configure_mesh()
+        .x_desc("Steps")
+        .y_desc("Average Reward")
+        .draw()?;
 
     chart
         .draw_series(LineSeries::new(eps_01_reward, &RED))?
