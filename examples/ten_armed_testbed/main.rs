@@ -4,6 +4,7 @@ use plotters::{
     backend::BitMapBackend,
     chart::ChartBuilder,
     drawing::IntoDrawingArea,
+    element::PathElement,
     series::LineSeries,
     style::{Color, IntoFont, BLACK, BLUE, GREEN, RED, WHITE},
 };
@@ -18,7 +19,9 @@ const STEP_LIMIT: usize = 1000;
 const NUM_EPISODES: usize = 2000;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut total_reward = [[0.0; STEP_LIMIT]; 3];
+    let mut eps_01_reward = [0.0; STEP_LIMIT];
+    let mut eps_001_reward = [0.0; STEP_LIMIT];
+    let mut eps_0_reward = [0.0; STEP_LIMIT];
     for _ in 0..NUM_EPISODES {
         let mut env = KArmedBandit::<10>::new(STEP_LIMIT);
 
@@ -27,7 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut agent = SampleAverageAgent::new(config);
         agent.go(&mut env);
         for (i, x) in env.take_rewards().into_iter().enumerate() {
-            total_reward[0][i] += x;
+            eps_01_reward[i] += x as f64;
         }
 
         // Epsilon = 0.01
@@ -37,7 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut agent = SampleAverageAgent::new(config);
         agent.go(&mut env);
         for (i, x) in env.take_rewards().into_iter().enumerate() {
-            total_reward[1][i] += x;
+            eps_001_reward[i] += x as f64;
         }
 
         // Epsilon = 0.0 (greedy)
@@ -47,20 +50,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut agent = SampleAverageAgent::new(config);
         agent.go(&mut env);
         for (i, x) in env.take_rewards().into_iter().enumerate() {
-            total_reward[2][i] += x;
+            eps_0_reward[i] += x as f64;
         }
     }
 
-    let data = total_reward.map(|d| {
-        d.into_iter()
-            .enumerate()
-            .map(|(i, x)| (i as i32, x as f64 / NUM_EPISODES as f64))
-    });
+    let [eps_01_reward, eps_001_reward, eps_0_reward] =
+        [eps_01_reward, eps_001_reward, eps_0_reward].map(|arr| {
+            arr.into_iter()
+                .enumerate()
+                .map(|(i, x)| (i as i32, x / NUM_EPISODES as f64))
+        });
 
     // Plot the results
 
-    let root = BitMapBackend::new("examples/ten_armed_testbed/results.png", (1024, 768))
-        .into_drawing_area();
+    let root = BitMapBackend::new("local/ten_armed_testbed.png", (1024, 768)).into_drawing_area();
     root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root)
         .caption("Average Reward", ("sans-serif", 50).into_font())
@@ -71,19 +74,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     chart.configure_mesh().draw()?;
 
-    let [data1, data2, data3] = data;
+    chart
+        .draw_series(LineSeries::new(eps_01_reward, &RED))?
+        .label("Epsilon = 0.1")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
 
     chart
-        .draw_series(LineSeries::new(data1, &RED))?
-        .label("Epsilon = 0.1");
+        .draw_series(LineSeries::new(eps_001_reward, &BLUE))?
+        .label("Epsilon = 0.01")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
 
     chart
-        .draw_series(LineSeries::new(data2, &BLUE))?
-        .label("Epsilon = 0.01");
-
-    chart
-        .draw_series(LineSeries::new(data3, &GREEN))?
-        .label("Epsilon = 0.0 (greedy)");
+        .draw_series(LineSeries::new(eps_0_reward, &GREEN))?
+        .label("Epsilon = 0.0 (greedy)")
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &GREEN));
 
     chart
         .configure_series_labels()
@@ -94,7 +98,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     root.present()?;
 
     std::process::Command::new("xdg-open")
-        .arg("examples/ten_armed_testbed/results.png")
+        .arg("local/ten_armed_testbed.png")
         .output()?;
 
     Ok(())
