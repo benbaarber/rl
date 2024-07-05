@@ -3,14 +3,18 @@ use rand_distr::{Distribution, Normal};
 
 use crate::env::{DiscreteActionSpace, Environment, Report};
 
-/// K-armed bandit environment
+/// The K-armed bandit problem is a simple environment with 1 state and K actions. Each action has a reward
+/// that is sampled from a normal distribution with a standard deviation of 1. The means of the reward distributions are sampled
+/// from another normal distribution upon initialization. The goal is to find the action with the highest expected reward.
 ///
-/// A simple environment with K arms, each of which has a normal distribution of rewards.
-/// The goal is to learn which arm has the highest mean reward.
+/// The environment can be stationary or non-stationary. In the stationary case, the reward
+/// distribution of each action remains constant throughout the episode. In the non-stationary
+/// case, the reward distribution of each action changes slightly after each step.
 pub struct KArmedBandit<const K: usize> {
     arms: [Normal<f32>; K],
     steps: usize,
     step_limit: usize,
+    is_stationary: bool,
     rewards: Vec<f32>,
     pub report: Report,
 }
@@ -20,7 +24,8 @@ impl<const K: usize> KArmedBandit<K> {
     ///
     /// ### Arguments
     /// - `step_limit` - The number of steps before the episode is terminated
-    pub fn new(step_limit: usize) -> Self {
+    /// - `stationary` - Whether the environment is stationary or not
+    pub fn new(step_limit: usize, stationary: bool) -> Self {
         let mut rng = rand::thread_rng();
         let dist = Normal::<f32>::new(0.0, 1.0).unwrap();
 
@@ -33,6 +38,7 @@ impl<const K: usize> KArmedBandit<K> {
             arms,
             steps: 0,
             step_limit,
+            is_stationary: stationary,
             rewards: Vec::with_capacity(step_limit),
             report: Report::new(vec!["reward"]),
         }
@@ -55,6 +61,15 @@ impl<const K: usize> Environment for KArmedBandit<K> {
             .and_modify(|x| *x += reward as f64);
         self.steps += 1;
         self.rewards.push(reward);
+
+        if !self.is_stationary {
+            let mut rng = rand::thread_rng();
+            let dist = Normal::<f32>::new(0.0, 0.01).unwrap();
+            self.arms = self.arms.map(|arm| {
+                let mean = arm.mean() + dist.sample(&mut rng);
+                Normal::new(mean, 1.0).unwrap()
+            });
+        }
 
         let next_state = if self.steps < self.step_limit {
             Some(())
@@ -87,7 +102,7 @@ mod tests {
 
     #[test]
     fn k_armed_bandit_functional() {
-        let mut env = KArmedBandit::<3>::new(10);
+        let mut env = KArmedBandit::<3>::new(10, true);
         assert_eq!(env.actions(), vec![0, 1, 2], "Actions are correct");
 
         let action = env.random_action();

@@ -1,3 +1,4 @@
-/target
-/local
-TODO.md
+target/
+local/
+venv/
+out/

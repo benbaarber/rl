@@ -1,108 +1,91 @@
 use std::error::Error;
 
-use plotters::{
-    backend::BitMapBackend,
-    chart::ChartBuilder,
-    drawing::IntoDrawingArea,
-    element::PathElement,
-    series::LineSeries,
-    style::{Color, IntoFont, BLACK, BLUE, GREEN, RED, WHITE},
-};
 use rl::{
-    algo::tabular::sample_average::{SampleAverageAgent, SampleAverageAgentConfig},
+    algo::tabular::{
+        action_occurrence::{ActionOccurrenceAgent, ActionOccurrenceAgentConfig},
+        ucb::{UCBAgent, UCBAgentConfig},
+    },
     decay,
-    exploration::EpsilonGreedy,
     gym::KArmedBandit,
 };
 
 const STEP_LIMIT: usize = 1000;
-const NUM_EPISODES: usize = 2000;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut eps_01_reward = [0.0; STEP_LIMIT];
-    let mut eps_001_reward = [0.0; STEP_LIMIT];
-    let mut eps_0_reward = [0.0; STEP_LIMIT];
-    for _ in 0..NUM_EPISODES {
-        let mut env = KArmedBandit::<10>::new(STEP_LIMIT);
+    let powers = (-7..=2).map(|x| 2f64.powi(x)).collect::<Vec<_>>();
+    let e_greedy_param_values = &powers[0..6];
+    let ucb_param_values = &powers[3..];
+    let goi_param_values = &powers[5..];
 
-        // Epsilon = 0.1
-        let config = SampleAverageAgentConfig::default();
-        let mut agent = SampleAverageAgent::new(config);
-        agent.go(&mut env);
-        for (i, x) in env.take_rewards().into_iter().enumerate() {
-            eps_01_reward[i] += x as f64;
-        }
+    let mut env = KArmedBandit::<10>::new(STEP_LIMIT, false);
 
-        // Epsilon = 0.01
-        let config = SampleAverageAgentConfig {
-            exploration: EpsilonGreedy::new(decay::Constant::new(0.01)),
+    // Epsilon greedy
+    let mut e_greedy_data = vec![];
+    for &x in e_greedy_param_values {
+        let config = ActionOccurrenceAgentConfig {
+            epsilon_decay_strategy: decay::Constant::new(x as f32),
+            ..Default::default()
         };
-        let mut agent = SampleAverageAgent::new(config);
+        let mut agent = ActionOccurrenceAgent::new(config);
         agent.go(&mut env);
-        for (i, x) in env.take_rewards().into_iter().enumerate() {
-            eps_001_reward[i] += x as f64;
-        }
-
-        // Epsilon = 0.0 (greedy)
-        let config = SampleAverageAgentConfig {
-            exploration: EpsilonGreedy::new(decay::Constant::new(0.0)),
-        };
-        let mut agent = SampleAverageAgent::new(config);
-        agent.go(&mut env);
-        for (i, x) in env.take_rewards().into_iter().enumerate() {
-            eps_0_reward[i] += x as f64;
-        }
+        let avg_reward = env.take_rewards().into_iter().sum::<f32>() as f64 / STEP_LIMIT as f64;
+        e_greedy_data.push((x, avg_reward));
     }
 
-    let [eps_01_reward, eps_001_reward, eps_0_reward] =
-        [eps_01_reward, eps_001_reward, eps_0_reward].map(|arr| {
-            arr.into_iter()
-                .enumerate()
-                .map(|(i, x)| (i as i32, x / NUM_EPISODES as f64))
-        });
+    // UCB
+    let mut ucb_data = vec![];
+    for &x in ucb_param_values {
+        let config = UCBAgentConfig {
+            ucb_c: x as f32,
+            ..Default::default()
+        };
+        let mut agent = UCBAgent::new(config);
+        agent.go(&mut env);
+        let avg_reward = env.take_rewards().into_iter().sum::<f32>() as f64 / STEP_LIMIT as f64;
+        ucb_data.push((x, avg_reward));
+    }
 
-    // Plot the results
+    // Greedy optimistic initialization
+    let mut goi_data = vec![];
+    for &x in goi_param_values {
+        let config = ActionOccurrenceAgentConfig {
+            alpha_fn: |_| 0.1,
+            default_action_value: x as f32,
+            ..Default::default()
+        };
+        let mut agent = ActionOccurrenceAgent::new(config);
+        agent.go(&mut env);
+        let avg_reward = env.take_rewards().into_iter().sum::<f32>() as f64 / STEP_LIMIT as f64;
+        goi_data.push((x, avg_reward));
+    }
 
-    let root = BitMapBackend::new("local/ten_armed_testbed.png", (1024, 768)).into_drawing_area();
-    root.fill(&WHITE)?;
-    let mut chart = ChartBuilder::on(&root)
-        .caption("Average Reward", ("sans-serif", 50).into_font())
-        .margin(5)
-        .x_label_area_size(40)
-        .y_label_area_size(40)
-        .build_cartesian_2d(0..1000, 0.0..2.0)?;
+    // Write data to CSV
 
-    chart
-        .configure_mesh()
-        .x_desc("Steps")
-        .y_desc("Average Reward")
-        .draw()?;
+    let mut wtr = csv::Writer::from_path("examples/ten_armed_testbed/out/data.csv")?;
+    wtr.write_record(&["param", "reward", "algo"])?;
 
-    chart
-        .draw_series(LineSeries::new(eps_01_reward, &RED))?
-        .label("Epsilon = 0.1")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+    for data in e_greedy_data {
+        wtr.write_record(&[&data.0.to_string(), &data.1.to_string(), "Epsilon greedy"])?;
+    }
 
-    chart
-        .draw_series(LineSeries::new(eps_001_reward, &BLUE))?
-        .label("Epsilon = 0.01")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+    for data in ucb_data {
+        wtr.write_record(&[&data.0.to_string(), &data.1.to_string(), "UCB"])?;
+    }
 
-    chart
-        .draw_series(LineSeries::new(eps_0_reward, &GREEN))?
-        .label("Epsilon = 0.0 (greedy)")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &GREEN));
+    for data in goi_data {
+        wtr.write_record(&[
+            &data.0.to_string(),
+            &data.1.to_string(),
+            "Greedy optimistic initialization",
+        ])?;
+    }
 
-    chart
-        .configure_series_labels()
-        .background_style(&WHITE.mix(0.8))
-        .border_style(&BLACK)
-        .draw()?;
+    wtr.flush()?;
 
-    root.present()?;
+    // Plot data
 
-    std::process::Command::new("xdg-open")
-        .arg("local/ten_armed_testbed.png")
+    std::process::Command::new("python")
+        .arg("examples/ten_armed_testbed/plot.py")
         .output()?;
 
     Ok(())

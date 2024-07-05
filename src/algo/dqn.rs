@@ -8,7 +8,7 @@ use burn::{
 use nn::loss::{MseLoss, Reduction};
 
 use crate::{
-    decay,
+    decay::{self, Decay},
     env::Environment,
     exploration::{Choice, EpsilonGreedy},
     memory::{Exp, Memory, PrioritizedReplayMemory, ReplayMemory},
@@ -35,7 +35,7 @@ pub trait DQNModel<B: AutodiffBackend, const D: usize>: AutodiffModule<B> {
 }
 
 /// Configuration for the [`DQNAgent`]
-pub struct DQNAgentConfig {
+pub struct DQNAgentConfig<D> {
     /// The capacity of the replay memory
     ///
     /// **Default:** `16384`
@@ -69,10 +69,10 @@ pub struct DQNAgentConfig {
     pub prioritized_memory_beta_0: f32,
     // /// The [`Optimizer`] to train the policy network with
     // pub optimizer: O,
-    /// The exploration policy, currently limited to epsilon greedy
+    /// The epsilon decay strategy
     ///
-    /// **Default:** [`EpsilonGreedy`] with [`Exponential`](decay::Exponential) decay with decay rate `1e-3`, start value `1.0`, and end value `0.05`
-    pub exploration: EpsilonGreedy<decay::Exponential>,
+    /// **Default:** [`Exponential`](decay::Exponential) decay with decay rate `1e-3`, start value `1.0`, and end value `0.05`
+    pub epsilon_decay_strategy: D,
     /// Gradient clipping
     ///
     /// **Default:** `Some(GradientClippingConfig::Value(100.0))`
@@ -97,7 +97,7 @@ pub struct DQNAgentConfig {
 
 // type AdamWOptimizer<M, B> = OptimizerAdaptor<AdamW<<B as AutodiffBackend>::InnerBackend>, M, B>;
 
-impl Default for DQNAgentConfig {
+impl Default for DQNAgentConfig<decay::Exponential> {
     fn default() -> Self {
         Self {
             memory_capacity: 16384,
@@ -107,7 +107,7 @@ impl Default for DQNAgentConfig {
             prioritized_memory_alpha: 0.7,
             prioritized_memory_beta_0: 0.5,
             // optimizer: AdamWConfig::new().init(),
-            exploration: EpsilonGreedy::new(decay::Exponential::new(1e-3, 1.0, 0.05).unwrap()),
+            epsilon_decay_strategy: decay::Exponential::new(1e-3, 1.0, 0.05).unwrap(),
             grad_clipping: Some(GradientClippingConfig::Value(100.0)),
             gamma: 0.999,
             target_update_interval: 1,
@@ -126,20 +126,22 @@ impl Default for DQNAgentConfig {
 ///     - The environment's action space must be discrete, since the policy network produces a Q value for each action.
 ///     - The state and action types' implementations of [`Clone`] should be very lightweight, as they are cloned often.
 ///       Ideally, both types are [`Copy`].
+/// - `DEC` - The decay strategy for epsilon-greedy exploration
 /// - `D` - The dimension of the input
 ///
 /// A generic optimizer will be added when burn v0.14.0 releases, until then the [`AdamW`](burn::optim::AdamW) optimizer will be used
-pub struct DQNAgent<B, M, E, const D: usize>
+pub struct DQNAgent<B, M, E, DEC, const D: usize>
 where
     B: AutodiffBackend,
     E: Environment,
+    DEC: Decay,
 {
     policy_net: Option<M>,
     target_net: Option<M>,
     device: &'static B::Device,
     memory: Memory<E>,
     // optimizer: O,
-    exploration: EpsilonGreedy<decay::Exponential>,
+    exploration: EpsilonGreedy<DEC>,
     grad_clipping: Option<GradientClippingConfig>,
     gamma: f32,
     target_update_interval: usize,
@@ -149,11 +151,12 @@ where
     episodes_elapsed: usize,
 }
 
-impl<B, M, E, const D: usize> DQNAgent<B, M, E, D>
+impl<B, M, E, DEC, const D: usize> DQNAgent<B, M, E, DEC, D>
 where
     B: AutodiffBackend<FloatElem = f32, IntElem = i32>,
     M: DQNModel<B, D>,
     E: Environment,
+    DEC: Decay,
     // O: Optimizer<M, B>,
     Vec<E::State>: ToTensor<B, D, Float>,
     Vec<E::Action>: ToTensor<B, 2, Int>,
@@ -165,7 +168,7 @@ where
     /// - `model` A [`DQNModel`] to be used as the policy and target networks
     /// - `config` A [`DQNAgentConfig`] containing components and hyperparameters for the agent
     /// - `device` A static reference to the device used for the `model`
-    pub fn new(model: M, config: DQNAgentConfig, device: &'static B::Device) -> Self {
+    pub fn new(model: M, config: DQNAgentConfig<DEC>, device: &'static B::Device) -> Self {
         let model_clone = model.clone();
         let memory = if config.use_prioritized_memory {
             Memory::Prioritized(PrioritizedReplayMemory::new(
@@ -188,7 +191,7 @@ where
             device,
             memory,
             // optimizer: config.optimizer,
-            exploration: config.exploration,
+            exploration: EpsilonGreedy::new(config.epsilon_decay_strategy),
             grad_clipping: config.grad_clipping,
             gamma: config.gamma,
             target_update_interval: config.target_update_interval,
