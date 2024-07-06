@@ -26,16 +26,8 @@ impl<const K: usize> KArmedBandit<K> {
     /// - `step_limit` - The number of steps before the episode is terminated
     /// - `stationary` - Whether the environment is stationary or not
     pub fn new(step_limit: usize, stationary: bool) -> Self {
-        let mut rng = rand::thread_rng();
-        let dist = Normal::<f32>::new(0.0, 1.0).unwrap();
-
-        let arms = std::array::from_fn(|_| {
-            let mean = dist.sample(&mut rng);
-            Normal::new(mean, 1.0).unwrap()
-        });
-
         Self {
-            arms,
+            arms: generate_arms(),
             steps: 0,
             step_limit,
             is_stationary: stationary,
@@ -82,6 +74,9 @@ impl<const K: usize> Environment for KArmedBandit<K> {
 
     fn reset(&mut self) -> Self::State {
         self.steps = 0;
+        self.arms = generate_arms();
+        self.rewards.clear();
+
         ()
     }
 
@@ -94,6 +89,16 @@ impl<const K: usize> DiscreteActionSpace for KArmedBandit<K> {
     fn actions(&self) -> Vec<Self::Action> {
         (0..K).collect()
     }
+}
+
+fn generate_arms<const K: usize>() -> [Normal<f32>; K] {
+    let mut rng = rand::thread_rng();
+    let dist = Normal::<f32>::new(0.0, 1.0).unwrap();
+
+    std::array::from_fn(|_| {
+        let mean = dist.sample(&mut rng);
+        Normal::new(mean, 1.0).unwrap()
+    })
 }
 
 #[cfg(test)]

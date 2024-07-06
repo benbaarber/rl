@@ -9,7 +9,36 @@ use rl::{
     gym::KArmedBandit,
 };
 
-const STEP_LIMIT: usize = 1000;
+// fn main() -> Result<(), Box<dyn Error>> {
+//     let mut env = KArmedBandit::<10>::new(10000, true);
+//     let config = ActionOccurrenceAgentConfig {
+//         epsilon_decay_strategy: decay::Constant::new(0.1),
+//         alpha_fn: |_| 0.01,
+//         ..Default::default()
+//     };
+//     let mut agent = ActionOccurrenceAgent::new(config);
+
+//     agent.go(&mut env);
+//     let rewards = env.take_rewards();
+
+//     let mut wtr = csv::Writer::from_path("examples/ten_armed_testbed/out/data2.csv")?;
+//     wtr.write_record(&["step", "reward"])?;
+
+//     for (i, reward) in rewards.iter().enumerate() {
+//         wtr.write_record(&[&i.to_string(), &reward.to_string()])?;
+//     }
+
+//     wtr.flush()?;
+
+//     std::process::Command::new("python")
+//         .arg("examples/ten_armed_testbed/plot2.py")
+//         .output()?;
+
+//     Ok(())
+// }
+
+const STEP_LIMIT: usize = 5000;
+const NUM_EPISODES: usize = 100;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let powers = (-7..=2).map(|x| 2f64.powi(x)).collect::<Vec<_>>();
@@ -27,8 +56,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             ..Default::default()
         };
         let mut agent = ActionOccurrenceAgent::new(config);
-        agent.go(&mut env);
-        let avg_reward = env.take_rewards().into_iter().sum::<f32>() as f64 / STEP_LIMIT as f64;
+
+        for _ in 0..NUM_EPISODES {
+            agent.go(&mut env);
+        }
+
+        let report = env.report.take();
+        let avg_reward = report["reward"] / (NUM_EPISODES * STEP_LIMIT) as f64;
         e_greedy_data.push((x, avg_reward));
     }
 
@@ -40,8 +74,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             ..Default::default()
         };
         let mut agent = UCBAgent::new(config);
-        agent.go(&mut env);
-        let avg_reward = env.take_rewards().into_iter().sum::<f32>() as f64 / STEP_LIMIT as f64;
+
+        for _ in 0..NUM_EPISODES {
+            agent.go(&mut env);
+        }
+
+        let report = env.report.take();
+        let avg_reward = report["reward"] / (NUM_EPISODES * STEP_LIMIT) as f64;
         ucb_data.push((x, avg_reward));
     }
 
@@ -54,8 +93,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             ..Default::default()
         };
         let mut agent = ActionOccurrenceAgent::new(config);
-        agent.go(&mut env);
-        let avg_reward = env.take_rewards().into_iter().sum::<f32>() as f64 / STEP_LIMIT as f64;
+
+        for _ in 0..NUM_EPISODES {
+            agent.go(&mut env);
+        }
+
+        let report = env.report.take();
+        let avg_reward = report["reward"] / (NUM_EPISODES * STEP_LIMIT) as f64;
         goi_data.push((x, avg_reward));
     }
 

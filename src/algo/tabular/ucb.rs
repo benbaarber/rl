@@ -54,6 +54,7 @@ where
     ucb_c: f32,
     default_action_value: f32,
     alpha_fn: fn(u32) -> f32,
+    t: u32,
     episode: u32,
 }
 
@@ -70,6 +71,7 @@ where
             ucb_c: config.ucb_c,
             default_action_value: config.default_action_value,
             alpha_fn: config.alpha_fn,
+            t: 0,
             episode: 0,
         }
     }
@@ -86,8 +88,8 @@ where
             })
             .collect::<Vec<_>>();
 
-        let t = (self.episode + 1) as f32;
-        let k = self.ucb_c * t.log10().sqrt();
+        let t = (self.t + 1) as f32;
+        let k = self.ucb_c * t.ln().sqrt();
         let choice = action_entries
             .iter()
             .enumerate()
@@ -142,6 +144,8 @@ where
                 next_state,
                 reward,
             });
+
+            self.t += 1;
         }
 
         self.episode += 1;

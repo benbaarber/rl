@@ -118,8 +118,8 @@ where
         let Exp {
             state,
             action,
-            next_state: _,
             reward,
+            ..
         } = experience;
 
         self.table
