@@ -9,35 +9,7 @@ use rl::{
     gym::KArmedBandit,
 };
 
-// fn main() -> Result<(), Box<dyn Error>> {
-//     let mut env = KArmedBandit::<10>::new(10000, true);
-//     let config = ActionOccurrenceAgentConfig {
-//         epsilon_decay_strategy: decay::Constant::new(0.1),
-//         alpha_fn: |_| 0.01,
-//         ..Default::default()
-//     };
-//     let mut agent = ActionOccurrenceAgent::new(config);
-
-//     agent.go(&mut env);
-//     let rewards = env.take_rewards();
-
-//     let mut wtr = csv::Writer::from_path("examples/ten_armed_testbed/out/data2.csv")?;
-//     wtr.write_record(&["step", "reward"])?;
-
-//     for (i, reward) in rewards.iter().enumerate() {
-//         wtr.write_record(&[&i.to_string(), &reward.to_string()])?;
-//     }
-
-//     wtr.flush()?;
-
-//     std::process::Command::new("python")
-//         .arg("examples/ten_armed_testbed/plot2.py")
-//         .output()?;
-
-//     Ok(())
-// }
-
-const STEP_LIMIT: usize = 5000;
+const STEP_LIMIT: usize = 2000;
 const NUM_EPISODES: usize = 100;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -51,13 +23,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Epsilon greedy
     let mut e_greedy_data = vec![];
     for &x in e_greedy_param_values {
-        let config = ActionOccurrenceAgentConfig {
-            epsilon_decay_strategy: decay::Constant::new(x as f32),
-            ..Default::default()
-        };
-        let mut agent = ActionOccurrenceAgent::new(config);
-
         for _ in 0..NUM_EPISODES {
+            let config = ActionOccurrenceAgentConfig {
+                epsilon_decay_strategy: decay::Constant::new(x as f32),
+                ..Default::default()
+            };
+            let mut agent = ActionOccurrenceAgent::new(config);
             agent.go(&mut env);
         }
 
@@ -69,13 +40,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     // UCB
     let mut ucb_data = vec![];
     for &x in ucb_param_values {
-        let config = UCBAgentConfig {
-            ucb_c: x as f32,
-            ..Default::default()
-        };
-        let mut agent = UCBAgent::new(config);
-
         for _ in 0..NUM_EPISODES {
+            let config = UCBAgentConfig {
+                ucb_c: x as f32,
+                ..Default::default()
+            };
+            let mut agent = UCBAgent::new(config);
             agent.go(&mut env);
         }
 
@@ -87,14 +57,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Greedy optimistic initialization
     let mut goi_data = vec![];
     for &x in goi_param_values {
-        let config = ActionOccurrenceAgentConfig {
-            alpha_fn: |_| 0.1,
-            default_action_value: x as f32,
-            ..Default::default()
-        };
-        let mut agent = ActionOccurrenceAgent::new(config);
-
         for _ in 0..NUM_EPISODES {
+            let config = ActionOccurrenceAgentConfig {
+                alpha_fn: |_| 0.1,
+                default_action_value: x as f32,
+                ..Default::default()
+            };
+            let mut agent = ActionOccurrenceAgent::new(config);
             agent.go(&mut env);
         }
 
@@ -128,9 +97,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Plot data
 
-    std::process::Command::new("python")
+    let output = std::process::Command::new("python")
         .arg("examples/ten_armed_testbed/plot.py")
         .output()?;
+
+    if !output.status.success() {
+        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+    }
 
     Ok(())
 }
