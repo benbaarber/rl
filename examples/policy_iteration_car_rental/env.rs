@@ -42,6 +42,11 @@ impl CarRental {
         }
     }
 
+    fn set_state(&mut self, state: [i32; 2]) {
+        self.locations[0].inventory = state[0];
+        self.locations[1].inventory = state[1];
+    }
+
     fn get_state(&self) -> [i32; 2] {
         [self.locations[0].inventory, self.locations[1].inventory]
     }
@@ -84,34 +89,18 @@ impl Environment for CarRental {
     }
 
     fn step(&mut self, action: Self::Action) -> (Option<Self::State>, f32) {
-        let mut net = 0;
-
-        // Move cars
-        let [i1, i2] = self.get_state();
-        let action = action.clamp(-i2, i1);
-        self.locations[0].inventory -= action;
-        self.locations[1].inventory += action;
-        net -= action.abs() * 2;
-
         let mut rng = rand::thread_rng();
-        for location in &mut self.locations {
-            location.inventory += location.returns.sample(&mut rng).round() as i32;
-            let requests = location.requests.sample(&mut rng).round() as i32;
-            let fulfilled = requests.min(location.inventory);
-            location.inventory -= fulfilled;
-            net += fulfilled * 10;
-            location.inventory = location.inventory.min(19);
-        }
-
-        dbg!(
-            net,
-            self.get_state(),
-            action,
-            self.locations[0].inventory,
-            self.locations[1].inventory
+        let (loc1_req, loc2_req, loc1_ret, loc2_ret) = (
+            self.locations[0].requests.sample(&mut rng).round() as i32,
+            self.locations[1].requests.sample(&mut rng).round() as i32,
+            self.locations[0].returns.sample(&mut rng).round() as i32,
+            self.locations[1].returns.sample(&mut rng).round() as i32,
         );
+        
+        let (next_state, reward) = transition(&self.get_state(), action, loc1_req, loc2_req, loc1_ret, loc2_ret);
+        self.set_state(next_state);
 
-        (Some(self.get_state()), net as f32)
+        (Some(next_state), reward as f32)
     }
 
     fn reset(&mut self) -> Self::State {
@@ -159,23 +148,46 @@ fn transition(
     loc2_ret: i32,
 ) -> ([i32; 2], f32) {
     let mut next_state = state.clone();
-    let mut reward = 0.0;
+    let mut reward = 0;
+
+    // Cannot move more cars than are present
+    let action = action.clamp(-state[1], state[0]);
 
     // Move cars
-    let action = action.clamp(-state[1], state[0]);
     next_state[0] -= action;
     next_state[1] += action;
-    reward -= action.abs() as f32 * 2.0;
+
+    // Moving cars costs $2 per car
+    reward -= action.abs() * 2;
+
+    // One of the employees can shuttle one car for free from the first location to the second
+    if action > 0 {
+        reward += 2;
+    }
 
     for (loc, req, ret) in [(0, loc1_req, loc1_ret), (1, loc2_req, loc2_ret)] {
         let mut inv = next_state[loc];
+
+        // Return cars
         inv += ret;
+
+        // Rent as many cars as possible
         let fulfilled = req.min(inv);
         inv -= fulfilled;
-        reward += fulfilled as f32 * 10.0;
+
+        // Each car rented out earns $10
+        reward += fulfilled * 10;
+
+        // Inventory cannot exceed 20 cars
         inv = inv.min(19);
+
+        // More than 10 cars at a location incurs a $4 cost for overflow lot
+        if inv > 10 {
+            reward -= 4;
+        }
+
         next_state[loc] = inv;
     }
 
-    (next_state, reward)
+    (next_state, reward as f32)
 }
