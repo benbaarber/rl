@@ -2,6 +2,7 @@
 use std::ops::Index;
 
 /// A fixed-size ringbuffer
+#[derive(Debug, Default, Clone)]
 pub struct RingBuffer<T> {
     buffer: Vec<T>,
     ix: usize,

@@ -10,6 +10,7 @@ use crate::{
 use super::Hashable;
 
 /// Configuration for the [`SampleAverageAgent`]
+#[derive(Debug, Clone)]
 pub struct ActionOccurrenceAgentConfig<D> {
     /// Decay strategy for the exploration parameter
     ///
@@ -36,7 +37,7 @@ impl Default for ActionOccurrenceAgentConfig<decay::Constant> {
 }
 
 /// An entry in the table
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 struct Entry {
     value: f32,
     count: u32,
@@ -50,6 +51,7 @@ struct Entry {
 /// Q<sub>n+1</sub> = Q<sub>n</sub> + α(n)(R<sub>n</sub> - Q<sub>n</sub>)
 ///
 /// where n is the current number of occurrences, Q is the value of the state-action pair, α is the learning rate, and R is the reward.
+#[derive(Debug, Clone)]
 pub struct ActionOccurrenceAgent<E, D>
 where
     E: Environment + DiscreteActionSpace,

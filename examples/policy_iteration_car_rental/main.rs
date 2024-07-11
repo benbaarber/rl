@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut policies = Vec::with_capacity(5);
 
     for i in 0..5 {
-        println!("Iteration {}", i);
+        println!("Iteration {}", i + 1);
         agent.learn(&mut env, 1);
         let mut policy = agent.policy().clone().into_iter().collect::<Vec<_>>();
         policy.sort_unstable_by_key(|(k, _)| *k);

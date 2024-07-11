@@ -8,6 +8,7 @@ use crate::{
 use super::Hashable;
 
 /// Configuration for the [`UCBAgent`]
+#[derive(Debug, Clone)]
 pub struct UCBAgentConfig {
     /// c value for the UCB exploration strategy
     ///
@@ -34,7 +35,7 @@ impl Default for UCBAgentConfig {
 }
 
 /// An entry in the table
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 struct Entry {
     value: f32,
     count: u32,
@@ -44,6 +45,7 @@ struct Entry {
 ///
 /// This agent is almost identical to the [`ActionOccurrenceAgent`](super::action_occurrence::ActionOccurrenceAgent),
 /// but uses the UCB exploration policy instead of epsilon-greedy.
+#[derive(Debug, Clone)]
 pub struct UCBAgent<E>
 where
     E: Environment + DiscreteActionSpace,

@@ -5,6 +5,7 @@ use crate::decay::Decay;
 use super::Choice;
 
 /// Epsilon greedy exploration policy with time-decaying epsilon threshold
+#[derive(Debug, Clone, PartialEq)]
 pub struct EpsilonGreedy<D: Decay> {
     epsilon: D,
 }

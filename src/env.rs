@@ -54,13 +54,42 @@ pub trait DiscreteActionSpace: Environment {
     fn actions(&self) -> Vec<Self::Action>;
 }
 
+/// An [Environment] with a discrete state space
+pub trait DiscreteStateSpace: Environment {
+    /// Get all possible states in the environment
+    fn states(&self) -> Vec<Self::State>;
+}
+
+/// An [Environment] with a deterministic model
+pub trait DeterministicModel: Environment {
+    /// Get the next state and reward given the provided state and action
+    fn model(&self, state: Self::State, action: Self::Action) -> (Option<Self::State>, f32);
+}
+
+/// An [Environment] with known dynamics
+pub trait KnownDynamics: Environment {
+    /// The dynamics of the environment
+    ///
+    /// p(s', r | s, a)
+    ///
+    /// This function returns the probability of transitioning to `next_state` and receiving `reward`
+    /// after taking `action` in `state`.
+    fn dynamics(
+        &self,
+        state: Self::State,
+        action: Self::Action,
+        next_state: Self::State,
+        reward: f32,
+    ) -> f32;
+}
+
 /// A format for reporting training results to [viz](crate::viz)
 ///
 /// Functionally a wrapper around a [BTreeMap] such that values are always returned in the same order.
 /// Meant to be initialized once and used for the lifetime of an [Environment].
 ///
 /// See examples for implementation
-#[derive(Debug)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Report {
     keys: Vec<&'static str>,
     map: BTreeMap<&'static str, f64>,

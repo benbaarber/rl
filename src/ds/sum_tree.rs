@@ -1,6 +1,7 @@
 use std::ops::Index;
 
 /// A binary tree data structure where each parent node is the sum of its child nodes
+#[derive(Debug, Clone, Default)]
 pub struct SumTree {
     tree: Vec<f32>,
     max: f32,

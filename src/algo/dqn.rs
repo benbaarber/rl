@@ -35,6 +35,7 @@ pub trait DQNModel<B: AutodiffBackend, const D: usize>: AutodiffModule<B> {
 }
 
 /// Configuration for the [`DQNAgent`]
+#[derive(Debug, Clone)]
 pub struct DQNAgentConfig<D> {
     /// The capacity of the replay memory
     ///
@@ -73,10 +74,6 @@ pub struct DQNAgentConfig<D> {
     ///
     /// **Default:** [`Exponential`](decay::Exponential) decay with decay rate `1e-3`, start value `1.0`, and end value `0.05`
     pub epsilon_decay_strategy: D,
-    /// Gradient clipping
-    ///
-    /// **Default:** `Some(GradientClippingConfig::Value(100.0))`
-    pub grad_clipping: Option<GradientClippingConfig>,
     /// The discount factor
     ///
     /// **Default:** `0.999`
@@ -108,7 +105,6 @@ impl Default for DQNAgentConfig<decay::Exponential> {
             prioritized_memory_beta_0: 0.5,
             // optimizer: AdamWConfig::new().init(),
             epsilon_decay_strategy: decay::Exponential::new(1e-3, 1.0, 0.05).unwrap(),
-            grad_clipping: Some(GradientClippingConfig::Value(100.0)),
             gamma: 0.999,
             target_update_interval: 1,
             tau: 5e-3,
@@ -130,6 +126,7 @@ impl Default for DQNAgentConfig<decay::Exponential> {
 /// - `D` - The dimension of the input
 ///
 /// A generic optimizer will be added when burn v0.14.0 releases, until then the [`AdamW`](burn::optim::AdamW) optimizer will be used
+#[derive(Debug, Clone)]
 pub struct DQNAgent<B, M, E, DEC, const D: usize>
 where
     B: AutodiffBackend,
@@ -142,7 +139,6 @@ where
     memory: Memory<E>,
     // optimizer: O,
     exploration: EpsilonGreedy<DEC>,
-    grad_clipping: Option<GradientClippingConfig>,
     gamma: f32,
     target_update_interval: usize,
     tau: f32,
@@ -192,7 +188,6 @@ where
             memory,
             // optimizer: config.optimizer,
             exploration: EpsilonGreedy::new(config.epsilon_decay_strategy),
-            grad_clipping: config.grad_clipping,
             gamma: config.gamma,
             target_update_interval: config.target_update_interval,
             tau: config.tau,
@@ -350,7 +345,7 @@ where
     /// Deploy the `DQNAgent` into the environment for one episode
     pub fn go(&mut self, env: &mut E) {
         let mut optimizer = AdamWConfig::new()
-            .with_grad_clipping(self.grad_clipping.clone())
+            .with_grad_clipping(Some(GradientClippingConfig::Value(100.0)))
             .init();
         let mut next_state = Some(env.reset());
 

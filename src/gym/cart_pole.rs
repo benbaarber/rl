@@ -45,7 +45,7 @@ impl<B: Backend<IntElem = i32>> ToTensor<B, 2, Int> for Vec<CPAction> {
 /// The classic CartPole reinforcement learning environment
 ///
 /// This implementation is a thin wrapper around [gym_rs](https://github.com/MathisWellmann/gym-rs)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CartPole {
     gym_env: CartPoleEnv,
     pub report: Report,

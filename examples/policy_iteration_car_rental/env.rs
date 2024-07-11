@@ -96,8 +96,15 @@ impl Environment for CarRental {
             self.locations[0].returns.sample(&mut rng).round() as i32,
             self.locations[1].returns.sample(&mut rng).round() as i32,
         );
-        
-        let (next_state, reward) = transition(&self.get_state(), action, loc1_req, loc2_req, loc1_ret, loc2_ret);
+
+        let (next_state, reward) = transition(
+            &self.get_state(),
+            action,
+            loc1_req,
+            loc2_req,
+            loc1_ret,
+            loc2_ret,
+        );
         self.set_state(next_state);
 
         (Some(next_state), reward as f32)

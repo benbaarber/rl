@@ -12,6 +12,7 @@ fn validate(rate: f32, vi: f32, vf: f32) -> Result<(), String> {
 }
 
 /// A constant value
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Constant {
     value: f32,
 }
@@ -29,6 +30,7 @@ impl Decay for Constant {
 }
 
 /// v(t) = v<sub>f</sub> + (v<sub>i</sub> - v<sub>f</sub>) * e<sup>-rt</sup>
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Exponential {
     rate: f32,
     vi: f32,
@@ -50,6 +52,7 @@ impl Decay for Exponential {
 }
 
 /// v(t) = v<sub>f</sub> + (v<sub>i</sub> - v<sub>f</sub>) / (1 + rt)
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct InverseTime {
     rate: f32,
     vi: f32,
@@ -71,6 +74,7 @@ impl Decay for InverseTime {
 }
 
 /// v(t) = max(v<sub>i</sub> - rt, v<sub>f</sub>)
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Linear {
     rate: f32,
     vi: f32,
@@ -92,6 +96,7 @@ impl Decay for Linear {
 }
 
 /// v(t) = max(v<sub>i</sub> * r<sup>floor(t/s)</sup>, v<sub>f</sub>)
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Step {
     rate: f32,
     vi: f32,

@@ -22,6 +22,7 @@ use super::{Exp, ExpBatch};
 ///   - Higher values mean higher prioritization, and `1.0` is a sensible maximum here, though higher values can be used
 /// - `beta_0` - the initial value for beta, the importance sampling exponent, which is annealed from β<sub>0</sub> to 1 to apply
 ///   IS weights to the temporal difference errors
+#[derive(Debug, Clone)]
 pub struct PrioritizedReplayMemory<E: Environment> {
     memory: RingBuffer<Exp<E>>,
     priorities: SumTree,

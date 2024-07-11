@@ -10,6 +10,7 @@ use crate::{
 use super::Hashable;
 
 /// Configuration for the [`QTableAgent`]
+#[derive(Debug, Clone)]
 pub struct QTableAgentConfig {
     pub exploration: EpsilonGreedy<decay::Exponential>,
     pub alpha: f32,
@@ -32,6 +33,7 @@ impl Default for QTableAgentConfig {
 /// - `E` - The [`Environment`] in which the agent will learn
 ///     - The environment's state and action spaces must both be discrete because a Q value will be recorded for each state action pair
 ///     - For the same reason, the state and action types must be `Copy`, `Eq`, and `Hash` to be used as keys in a [`HashMap`]
+#[derive(Debug, Clone)]
 pub struct QTableAgent<E>
 where
     E: Environment + DiscreteActionSpace,

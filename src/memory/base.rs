@@ -14,6 +14,7 @@ use super::{Exp, ExpBatch};
 ///
 /// ### Fields:
 /// - `memory` - A `RingBuffer` that stores the experiences
+#[derive(Debug, Clone)]
 pub struct ReplayMemory<E: Environment> {
     memory: RingBuffer<Exp<E>>,
     pub batch_size: usize,

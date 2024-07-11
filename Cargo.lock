@@ -1916,6 +1916,8 @@ dependencies = [
  "num-complex",
  "num-rational",
  "num-traits",
+ "rand",
+ "rand_distr",
  "simba",
  "typenum",
 ]
@@ -2514,6 +2516,7 @@ dependencies = [
  "rand",
  "rand_distr",
  "ratatui 0.26.3",
+ "statrs",
  "strum 0.26.3",
  "tui-logger",
  "unicode-width",
@@ -2896,6 +2899,18 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "statrs"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f697a07e4606a0a25c044de247e583a330dbb1731d11bc7350b81f48ad567255"
+dependencies = [
+ "approx",
+ "nalgebra",
+ "num-traits",
+ "rand",
+]
 
 [[package]]
 name = "strsim"
