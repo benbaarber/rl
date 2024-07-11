@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fs};
 
 use rl::{
     algo::tabular::{
@@ -73,6 +73,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Write data to CSV
+
+    fs::create_dir_all("examples/ten_armed_testbed/out")?;
 
     let mut wtr = csv::Writer::from_path("examples/ten_armed_testbed/out/data.csv")?;
     wtr.write_record(&["param", "reward", "algo"])?;
