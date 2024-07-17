@@ -99,13 +99,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Plot data
 
-    let output = std::process::Command::new("python")
+    std::process::Command::new("python")
         .arg("examples/ten_armed_testbed/plot.py")
-        .output()?;
-
-    if !output.status.success() {
-        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-    }
+        .spawn()?
+        .wait()?;
 
     Ok(())
 }
