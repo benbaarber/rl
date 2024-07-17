@@ -1,6 +1,7 @@
 use rand::seq::IteratorRandom;
-use rl::env::{DiscreteActionSpace, Environment, Report};
 use strum::{EnumIter, VariantArray};
+
+use crate::env::{DiscreteActionSpace, Environment, Report};
 
 pub type Pos = (i32, i32);
 

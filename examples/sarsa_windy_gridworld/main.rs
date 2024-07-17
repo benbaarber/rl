@@ -1,20 +1,21 @@
-use std::{error::Error, fs};
+use std::{error::Error, fs, path::Path};
 
 use agent::SarsaAgent;
-use env::WindyGridworld;
+use rl::gym::WindyGridworld;
 
 mod agent;
-mod env;
 
 const NUM_EPISODES: u16 = 500;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let path = Path::new("examples/sarsa_windy_gridworld");
+
     let mut env = WindyGridworld::new();
     let mut agent = SarsaAgent::new(0.1, 0.5, 1.0);
 
-    fs::create_dir_all("examples/sarsa_windy_gridworld/out")?;
+    fs::create_dir_all(path.join("out"))?;
 
-    let mut wtr = csv::Writer::from_path("examples/sarsa_windy_gridworld/out/data.csv")?;
+    let mut wtr = csv::Writer::from_path(path.join("out/data.csv"))?;
     wtr.write_record(&["steps", "episodes"])?;
 
     for i in 0..NUM_EPISODES {
@@ -25,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     wtr.flush()?;
 
     std::process::Command::new("python")
-        .arg("examples/sarsa_windy_gridworld/plot.py")
+        .arg(path.join("plot.py"))
         .spawn()?
         .wait()?;
 

@@ -4,9 +4,8 @@ use rl::{
     decay,
     env::{DiscreteActionSpace, Environment},
     exploration::{Choice, EpsilonGreedy},
+    gym::windy_gridworld::{Action, Pos, WindyGridworld},
 };
-
-use crate::env::{Action, Pos, WindyGridworld};
 
 type E = WindyGridworld;
 type State = Pos;
