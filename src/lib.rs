@@ -10,6 +10,8 @@ pub mod ds;
 /// Environment
 pub mod env;
 
+pub mod agent;
+
 /// Exploration policies
 pub mod exploration;
 

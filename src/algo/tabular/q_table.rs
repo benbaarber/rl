@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
+use rand::Rng;
+
 use crate::{
+    agent::Agent,
     assert_interval, decay,
     env::{DiscreteActionSpace, Environment},
     exploration::{Choice, EpsilonGreedy},
@@ -139,6 +142,34 @@ where
             );
         }
 
+        self.episode += 1;
+    }
+}
+
+impl<E> Agent<E> for QTableAgent<E>
+where
+    E: Environment + DiscreteActionSpace,
+    E::State: Hashable,
+    E::Action: Hashable,
+{
+    fn act(&self, state: &E::State, actions: &[E::Action]) -> <E as Environment>::Action {
+        match self.exploration.choose(self.episode) {
+            Choice::Explore => actions[rand::thread_rng().gen_range(0..actions.len())],
+            Choice::Exploit => {
+                *actions
+                    .iter()
+                    .max_by(|&a, &b| {
+                        let a_value = *self.q_table.get(&(*state, *a)).unwrap_or(&0.0);
+                        let b_value = *self.q_table.get(&(*state, *b)).unwrap_or(&0.0);
+                        a_value.partial_cmp(&b_value).unwrap()
+                    })
+                    .expect("There is always at least one action available") // Maybe make this more lenient by providing a default?
+            }
+        }
+    }
+
+    fn learn(&mut self, exp: Exp<E>, next_actions: &[E::Action]) {
+        self.learn(exp, next_actions);
         self.episode += 1;
     }
 }
