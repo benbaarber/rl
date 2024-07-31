@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
+use rand::Rng;
+
 use crate::{
+    agent::Agent,
     decay::{self, Decay},
     env::{DiscreteActionSpace, Environment},
     exploration::{Choice, EpsilonGreedy},
@@ -154,6 +157,42 @@ where
             });
         }
 
+        self.episode += 1;
+    }
+}
+impl<E, D> Agent<E> for ActionOccurrenceAgent<E, D>
+where
+    E: Environment + DiscreteActionSpace,
+    E::State: Hashable,
+    E::Action: Hashable,
+    D: Decay,
+{
+    fn act(&self, state: &E::State, actions: &[E::Action]) -> E::Action {
+        match self.exploration.choose(self.episode) {
+            Choice::Explore => actions[rand::thread_rng().gen_range(0..actions.len())],
+            Choice::Exploit => *actions
+                .iter()
+                .max_by(|&a, &b| {
+                    let a_value = self
+                        .table
+                        .get(&(*state, *a))
+                        .copied()
+                        .unwrap_or_default()
+                        .value;
+                    let b_value = self
+                        .table
+                        .get(&(*state, *b))
+                        .copied()
+                        .unwrap_or_default()
+                        .value;
+                    a_value.partial_cmp(&b_value).unwrap()
+                })
+                .expect("There is always at least one action available"),
+        }
+    }
+
+    fn learn(&mut self, exp: Exp<E>, _: &[E::Action]) {
+        self.learn(exp);
         self.episode += 1;
     }
 }

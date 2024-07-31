@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
+    agent::Agent,
     env::{DiscreteActionSpace, Environment},
     memory::Exp,
 };
@@ -151,5 +152,19 @@ where
         }
 
         self.episode += 1;
+    }
+}
+impl<E> Agent<E> for UCBAgent<E>
+where
+    E: Environment + DiscreteActionSpace,
+    E::State: Hashable,
+    E::Action: Hashable + From<usize>,
+{
+    fn act(&self, state: &E::State, actions: &[E::Action]) -> E::Action {
+        self.act(*state, actions)
+    }
+
+    fn learn(&mut self, exp: Exp<E>, _: &[E::Action]) {
+        self.learn(exp);
     }
 }
