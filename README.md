@@ -4,7 +4,7 @@
 [![Documentation](https://img.shields.io/badge/Docs-latest-blue)](https://docs.rs/rl/0.4.0/rl/)
 [![Rust Version](https://img.shields.io/badge/Rust-v1.79.0+-tan)](https://releases.rs/docs/1.79.0)
 
-*NOTE: Progress will be slow until later this month when I finish studying Barto & Sutton's RL textbook to gain a stronger theoretical understanding of the field*
+*NOTE: I am currently busy with other tasks, so this project is on hiatus. Development will resume soon.*
 
 ## About
 **rl** is a fully Rust-native reinforcement learning library with the goal of providing a unified RL development experience, aiming to do for RL what libraries like PyTorch did for deep learning. By leveraging Rust's powerful type system and the [**burn**](https://github.com/tracel-ai/burn) library, **rl** enables users to reuse production-ready SoTA algorithms with arbitrary environments, state spaces, and action spaces. 
