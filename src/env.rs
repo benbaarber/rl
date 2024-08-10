@@ -2,9 +2,10 @@ use std::{
     collections::BTreeMap,
     fmt::Debug,
     ops::{Deref, DerefMut},
+    os::unix::net,
 };
 
-use crate::util::summary_from_keys;
+use crate::{agent::Agent, memory::Exp, util::summary_from_keys};
 
 /// Represents a Markov decision process, defining the dynamics of an environment
 /// in which an agent can operate.
@@ -52,6 +53,31 @@ pub trait DiscreteActionSpace: Environment {
     ///
     /// The returned slice should never be empty, instead specify an action that represents doing nothing if necessary.
     fn actions(&self) -> Vec<Self::Action>;
+
+    fn run(&mut self, agent: &mut impl Agent<Self>)
+    where
+        Self: Sized,
+        Self::Action: Copy,
+        Self::State: Copy,
+    {
+        let mut next_state = Some(self.reset());
+        let mut actions = self.actions();
+        while let Some(state) = next_state {
+            let action = agent.act(&state, &actions);
+            let (next, reward) = self.step(action);
+            next_state = next;
+            actions = self.actions();
+            agent.learn(
+                Exp {
+                    state,
+                    action,
+                    reward,
+                    next_state,
+                },
+                &actions,
+            );
+        }
+    }
 }
 
 /// An [Environment] with a discrete state space
